@@ -1,0 +1,420 @@
+{% extends 'prediction/base.html' %}
+
+{% block title %}Predict - Smartphone Addiction Detection System{% endblock %}
+
+{% block content %}
+<h1 class="page-title">
+    <i class="fas fa-brain"></i> Predict Your Addiction Risk
+</h1>
+
+<p style="font-size: 1rem; color: #666; margin: 1rem 0;">
+    Fill in your daily smartphone usage information to get an instant addiction risk assessment.
+</p>
+
+<!-- Search Section -->
+<div style="background: #e8f4fd; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 2px solid #4facfe;">
+    <h3 style="color: #4facfe; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-search"></i> Search Existing Record
+    </h3>
+    <div style="display: flex; gap: 1rem; align-items: end;">
+        <div style="flex: 1;">
+            <label for="searchInput" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Search by ID or UID (e.g., 1234 or U00123)</label>
+            <input type="text" id="searchInput" placeholder="Enter record ID or UID..." 
+                   style="width: 100%; padding: 0.8rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+        </div>
+        <button type="button" onclick="searchRecord()" class="btn btn-info" style="padding: 0.8rem 1.5rem;">
+            <i class="fas fa-search"></i> Search
+        </button>
+    </div>
+    <div id="searchResult" style="margin-top: 1rem; display: none;"></div>
+</div>
+
+<div style="background: #f5f5f5; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+    <form id="predictionForm">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            
+            <!-- User Info Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    👤 Personal Information
+                </h3>
+                
+                <div class="form-group">
+                    <label for="age">Age (Years)</label>
+                    <input type="number" id="age" name="age" min="5" max="100" required placeholder="e.g., 25">
+                </div>
+                
+                <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <select id="gender" name="gender" required>
+                        <option value="">-- Select --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Screen Time Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    📱 Daily Screen Time (Hours)
+                </h3>
+                
+                <div class="form-group">
+                    <label for="daily_screen_time_hours">Total Daily Screen Time</label>
+                    <input type="text" id="daily_screen_time_hours" name="daily_screen_time_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 6.5">
+                </div>
+                
+                <div class="form-group">
+                    <label for="social_media_hours">Social Media Hours</label>
+                    <input type="text" id="social_media_hours" name="social_media_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 2">
+                </div>
+                
+                <div class="form-group">
+                    <label for="gaming_hours">Gaming Hours</label>
+                    <input type="text" id="gaming_hours" name="gaming_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 1">
+                </div>
+            </div>
+            
+            <!-- Work/Study Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    💼 Work & Sleep
+                </h3>
+                
+                <div class="form-group">
+                    <label for="work_study_hours">Work/Study Hours</label>
+                    <input type="text" id="work_study_hours" name="work_study_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 8">
+                </div>
+                
+                <div class="form-group">
+                    <label for="sleep_hours">Sleep Hours per Night</label>
+                    <input type="text" id="sleep_hours" name="sleep_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 7">
+                </div>
+                
+                <div class="form-group">
+                    <label for="stress_level">Stress Level</label>
+                    <select id="stress_level" name="stress_level" required>
+                        <option value="">-- Select --</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- App Usage Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    🔔 App Usage Behavior
+                </h3>
+                
+                <div class="form-group">
+                    <label for="notifications_per_day">Notifications per Day</label>
+                    <input type="number" id="notifications_per_day" name="notifications_per_day" 
+                           min="0" max="10000" required placeholder="e.g., 50">
+                </div>
+                
+                <div class="form-group">
+                    <label for="app_opens_per_day">App Opens per Day</label>
+                    <input type="number" id="app_opens_per_day" name="app_opens_per_day" 
+                           min="0" max="10000" required placeholder="e.g., 100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="weekend_screen_time">Weekend Screen Time (Hours)</label>
+                    <input type="text" id="weekend_screen_time" name="weekend_screen_time" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 8">
+                </div>
+            </div>
+            
+            <!-- Impact Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    📊 Impact Assessment
+                </h3>
+                
+                <div class="form-group">
+                    <label for="academic_work_impact">Does smartphone usage impact your academic/work performance?</label>
+                    <select id="academic_work_impact" name="academic_work_impact" required>
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes, it impacts my performance</option>
+                        <option value="No">No, it doesn't impact my performance</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="button" class="btn btn-info" onclick="loadSampleData()" style="flex: 1;">
+                <i class="fas fa-file-alt"></i> Fill Form with Sample Data
+            </button>
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+                <i class="fas fa-magic"></i> Predict Addiction Risk
+            </button>
+            <button type="reset" class="btn btn-secondary" style="flex: 1;">
+                <i class="fas fa-redo"></i> Reset Form
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" style="display: none; text-align: center; margin: 2rem 0;">
+    <div style="font-size: 3rem;">⏳</div>
+    <p style="color: #666; margin-top: 1rem;">Analyzing your data...</p>
+</div>
+
+<!-- Results Section -->
+<div id="resultsSection" style="display: none; margin-top: 2rem;">
+    <div id="predictionResult"></div>
+    <div id="recommendationsDiv"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Collect form data and convert to numbers
+        const formData = {
+            age: parseInt(document.getElementById('age').value),
+            gender: document.getElementById('gender').value,
+            daily_screen_time_hours: parseFloat(document.getElementById('daily_screen_time_hours').value),
+            social_media_hours: parseFloat(document.getElementById('social_media_hours').value),
+            gaming_hours: parseFloat(document.getElementById('gaming_hours').value),
+            work_study_hours: parseFloat(document.getElementById('work_study_hours').value),
+            sleep_hours: parseFloat(document.getElementById('sleep_hours').value),
+            notifications_per_day: parseInt(document.getElementById('notifications_per_day').value),
+            app_opens_per_day: parseInt(document.getElementById('app_opens_per_day').value),
+            weekend_screen_time: parseFloat(document.getElementById('weekend_screen_time').value),
+            stress_level: document.getElementById('stress_level').value,
+            academic_work_impact: document.getElementById('academic_work_impact').value
+        };
+        
+        // Show loading
+        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('resultsSection').style.display = 'none';
+        
+        try {
+            const response = await apiCall('/api/records/predict/', 'POST', formData);
+            
+            if (response.success) {
+                // Display result
+                const riskColor = {
+                    'No Addiction': '#43e97b',
+                    'Mild': '#ffd700',
+                    'Moderate': '#ff9500',
+                    'Severe': '#ff5252'
+                };
+                
+                const riskEmoji = {
+                    'No Addiction': '🟢',
+                    'Mild': '🟡',
+                    'Moderate': '🟠',
+                    'Severe': '🔴'
+                };
+                
+                let resultHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Prediction completed successfully!</span>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, ${riskColor[response.prediction]} 0%, ${riskColor[response.prediction]} 100%); 
+                                color: white; border-radius: 12px; padding: 2rem; text-align: center; margin: 1.5rem 0;">
+                        <div style="font-size: 3rem; margin-bottom: 1rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">${riskEmoji[response.prediction]}</div>
+                        <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">${response.prediction} Risk</h2>
+                        <p style="font-size: 1.2rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">Addiction Probability: <strong style="color: white;">${response.probability}%</strong></p>
+                    </div>
+                    
+                    <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">📋 Your Assessment</h3>
+                        <ul style="list-style: none;">
+                            <li style="padding: 0.5rem 0;"><strong>Daily Screen Time:</strong> ${formData.daily_screen_time_hours} hours</li>
+                            <li style="padding: 0.5rem 0;"><strong>Sleep Hours:</strong> ${formData.sleep_hours} hours</li>
+                            <li style="padding: 0.5rem 0;"><strong>Stress Level:</strong> ${formData.stress_level}</li>
+                            <li style="padding: 0.5rem 0;"><strong>App Opens per Day:</strong> ${formData.app_opens_per_day}</li>
+                        </ul>
+                    </div>
+                `;
+                
+                document.getElementById('predictionResult').innerHTML = resultHTML;
+                
+                // Display recommendations
+                let recommendationsHTML = '<div style="margin-top: 1.5rem;"><h3 style="color: #667eea; margin-bottom: 1rem;">💡 Personalized Recommendations</h3>';
+                
+                if (response.recommendations && response.recommendations.length > 0) {
+                    recommendationsHTML += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">';
+                    
+                    response.recommendations.forEach(rec => {
+                        const alertClass = {
+                            'success': 'alert-success',
+                            'action': 'alert-info',
+                            'warning': 'alert-warning'
+                        }[rec.type] || 'alert-info';
+                        
+                        recommendationsHTML += `
+                            <div class="alert ${alertClass}">
+                                <span style="font-size: 1.5rem;">${rec.icon}</span>
+                                <span>${rec.text}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    recommendationsHTML += '</div>';
+                }
+                
+                recommendationsHTML += '</div>';
+                document.getElementById('recommendationsDiv').innerHTML = recommendationsHTML;
+                
+                document.getElementById('resultsSection').style.display = 'block';
+                
+                // Auto-scroll to prediction result (addiction probability section)
+                document.getElementById('predictionResult').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            } else {
+                alert('Error: ' + (response.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error during prediction: ' + error.message);
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+    });
+
+    // Search Record function
+    async function searchRecord() {
+        const searchInput = document.getElementById('searchInput').value.trim();
+        const searchResult = document.getElementById('searchResult');
+        
+        if (!searchInput) {
+            searchResult.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Please enter an ID or UID to search.</div>';
+            searchResult.style.display = 'block';
+            return;
+        }
+        
+        // Parse search input - handle both numeric IDs and UID format
+        let searchId;
+        if (searchInput.startsWith('U') || searchInput.startsWith('u')) {
+            // Extract numeric part from UID format (e.g., U00123 -> 123)
+            searchId = parseInt(searchInput.substring(1));
+        } else {
+            // Direct numeric ID
+            searchId = parseInt(searchInput);
+        }
+        
+        if (isNaN(searchId)) {
+            searchResult.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times"></i> Invalid ID format. Please enter a number or UID format (e.g., 1234 or U00123).</div>';
+            searchResult.style.display = 'block';
+            return;
+        }
+        
+        searchResult.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+        searchResult.style.display = 'block';
+        
+        try {
+            const response = await apiCall(`/api/records/${searchId}/`, 'GET');
+            
+            if (response.success) {
+                const record = response.record;
+                
+                // Fill form with found record data
+                document.getElementById('age').value = record.age;
+                document.getElementById('gender').value = record.gender;
+                document.getElementById('daily_screen_time_hours').value = record.daily_screen_time_hours;
+                document.getElementById('social_media_hours').value = record.social_media_hours;
+                document.getElementById('gaming_hours').value = record.gaming_hours;
+                document.getElementById('work_study_hours').value = record.work_study_hours;
+                document.getElementById('sleep_hours').value = record.sleep_hours;
+                document.getElementById('notifications_per_day').value = record.notifications_per_day;
+                document.getElementById('app_opens_per_day').value = record.app_opens_per_day;
+                document.getElementById('weekend_screen_time').value = record.weekend_screen_time;
+                document.getElementById('stress_level').value = record.stress_level;
+                document.getElementById('academic_work_impact').value = record.academic_work_impact;
+                
+                searchResult.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Record Found!</strong> ID: #${record.id} | 
+                        Risk Level: ${record.predicted_addiction_risk} | 
+                        Probability: ${(record.addiction_probability * 100).toFixed(1)}%
+                        <br><small>Form has been filled with the record data. You can modify values and click "Predict Addiction Risk" to update.</small>
+                    </div>
+                `;
+                
+                // Scroll to form
+                document.getElementById('predictionForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                searchResult.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Record not found: ${response.error || 'Unknown error'}</div>`;
+            }
+        } catch (error) {
+            searchResult.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Error searching: ${error.message}</div>`;
+        }
+    }
+
+    // Add Enter key support for search
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchRecord();
+        }
+    });
+
+    // Load Sample Data function
+    async function loadSampleData() {
+        try {
+            const response = await apiCall('/api/records/sample_data/', 'GET');
+            
+            if (response.success) {
+                const sample = response.sample_data;
+                
+                // Fill the form with sample data
+                document.getElementById('age').value = sample.age;
+                document.getElementById('gender').value = sample.gender;
+                document.getElementById('daily_screen_time_hours').value = sample.daily_screen_time_hours;
+                document.getElementById('social_media_hours').value = sample.social_media_hours;
+                document.getElementById('gaming_hours').value = sample.gaming_hours;
+                document.getElementById('work_study_hours').value = sample.work_study_hours;
+                document.getElementById('sleep_hours').value = sample.sleep_hours;
+                document.getElementById('notifications_per_day').value = sample.notifications_per_day;
+                document.getElementById('app_opens_per_day').value = sample.app_opens_per_day;
+                document.getElementById('weekend_screen_time').value = sample.weekend_screen_time;
+                document.getElementById('stress_level').value = sample.stress_level;
+                document.getElementById('academic_work_impact').value = sample.academic_work_impact;
+                
+                // Show success message
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-info';
+                alertDiv.innerHTML = `<i class="fas fa-check-circle"></i> Form filled with sample data! Click "Predict Addiction Risk" to save and get results.`;
+                alertDiv.style.position = 'fixed';
+                alertDiv.style.top = '20px';
+                alertDiv.style.right = '20px';
+                alertDiv.style.zIndex = '9999';
+                document.body.appendChild(alertDiv);
+                
+                // Remove alert after 3 seconds
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 3000);
+            } else {
+                alert('Error loading sample data: ' + (response.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error loading sample data: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}

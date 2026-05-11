@@ -1,0 +1,334 @@
+{% extends 'prediction/base.html' %}
+
+{% block title %}Add Record - Smartphone Addiction Detection System{% endblock %}
+
+{% block content %}
+<h1 class="page-title">
+    <i class="fas fa-plus"></i> Add New Record
+</h1>
+
+<p style="font-size: 1rem; color: #666; margin: 1rem 0;">
+    Fill in the user information to add a new record to the database with addiction risk assessment.
+</p>
+
+<div style="background: #f5f5f5; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+    <form id="addRecordForm">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            
+            <!-- User Info Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    <i class="fas fa-user"></i> Personal Information
+                </h3>
+                
+                <div class="form-group">
+                    <label for="age">Age (Years)</label>
+                    <input type="number" id="age" name="age" min="5" max="100" required placeholder="e.g., 25">
+                </div>
+                
+                <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <select id="gender" name="gender" required>
+                        <option value="">-- Select --</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Screen Time Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    <i class="fas fa-mobile-alt"></i> Daily Screen Time (Hours)
+                </h3>
+                
+                <div class="form-group">
+                    <label for="daily_screen_time_hours">Total Daily Screen Time</label>
+                    <input type="text" id="daily_screen_time_hours" name="daily_screen_time_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 6.5">
+                </div>
+                
+                <div class="form-group">
+                    <label for="social_media_hours">Social Media Hours</label>
+                    <input type="text" id="social_media_hours" name="social_media_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 2">
+                </div>
+                
+                <div class="form-group">
+                    <label for="gaming_hours">Gaming Hours</label>
+                    <input type="text" id="gaming_hours" name="gaming_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 1">
+                </div>
+            </div>
+            
+            <!-- Work/Study Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    <i class="fas fa-briefcase"></i> Work & Sleep
+                </h3>
+                
+                <div class="form-group">
+                    <label for="work_study_hours">Work/Study Hours</label>
+                    <input type="text" id="work_study_hours" name="work_study_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 8">
+                </div>
+                
+                <div class="form-group">
+                    <label for="sleep_hours">Sleep Hours per Night</label>
+                    <input type="text" id="sleep_hours" name="sleep_hours" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 7">
+                </div>
+                
+                <div class="form-group">
+                    <label for="stress_level">Stress Level</label>
+                    <select id="stress_level" name="stress_level" required>
+                        <option value="">-- Select --</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- App Usage Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    <i class="fas fa-bell"></i> App Usage Behavior
+                </h3>
+                
+                <div class="form-group">
+                    <label for="notifications_per_day">Notifications per Day</label>
+                    <input type="number" id="notifications_per_day" name="notifications_per_day" 
+                           min="0" max="10000" required placeholder="e.g., 50">
+                </div>
+                
+                <div class="form-group">
+                    <label for="app_opens_per_day">App Opens per Day</label>
+                    <input type="number" id="app_opens_per_day" name="app_opens_per_day" 
+                           min="0" max="10000" required placeholder="e.g., 100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="weekend_screen_time">Weekend Screen Time (Hours)</label>
+                    <input type="text" id="weekend_screen_time" name="weekend_screen_time" 
+                           pattern="^\d+(\.\d+)?$" required placeholder="e.g., 8">
+                </div>
+            </div>
+            
+            <!-- Impact Section -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #667eea;">
+                    <i class="fas fa-chart-line"></i> Impact Assessment
+                </h3>
+                
+                <div class="form-group">
+                    <label for="academic_work_impact">Does smartphone usage impact your academic/work performance?</label>
+                    <select id="academic_work_impact" name="academic_work_impact" required>
+                        <option value="">-- Select --</option>
+                        <option value="Yes">Yes, it impacts my performance</option>
+                        <option value="No">No, it doesn't impact my performance</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="button" class="btn btn-info" onclick="loadSampleData()" style="flex: 1;">
+                <i class="fas fa-database"></i> Load Sample User Data
+            </button>
+            <button type="submit" class="btn btn-primary" style="flex: 1;">
+                <i class="fas fa-plus"></i> Add Record
+            </button>
+            <button type="reset" class="btn btn-secondary" style="flex: 1;">
+                <i class="fas fa-redo"></i> Reset Form
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" style="display: none; text-align: center; margin: 2rem 0;">
+    <div style="font-size: 3rem;"><i class="fas fa-spinner fa-spin"></i></div>
+    <p style="color: #666; margin-top: 1rem;">Adding record and analyzing data...</p>
+</div>
+
+<!-- Results Section -->
+<div id="resultsSection" style="display: none; margin-top: 2rem;">
+    <div id="predictionResult"></div>
+    <div id="recommendationsDiv"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('addRecordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Collect form data and convert to numbers
+        const formData = {
+            age: parseInt(document.getElementById('age').value),
+            gender: document.getElementById('gender').value,
+            daily_screen_time_hours: parseFloat(document.getElementById('daily_screen_time_hours').value),
+            social_media_hours: parseFloat(document.getElementById('social_media_hours').value),
+            gaming_hours: parseFloat(document.getElementById('gaming_hours').value),
+            work_study_hours: parseFloat(document.getElementById('work_study_hours').value),
+            sleep_hours: parseFloat(document.getElementById('sleep_hours').value),
+            notifications_per_day: parseInt(document.getElementById('notifications_per_day').value),
+            app_opens_per_day: parseInt(document.getElementById('app_opens_per_day').value),
+            weekend_screen_time: parseFloat(document.getElementById('weekend_screen_time').value),
+            stress_level: document.getElementById('stress_level').value,
+            academic_work_impact: document.getElementById('academic_work_impact').value
+        };
+        
+        // Show loading
+        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('resultsSection').style.display = 'none';
+        
+        try {
+            const response = await apiCall('/api/records/predict/', 'POST', formData);
+            
+            if (response.success) {
+                // Display result
+                const riskColor = {
+                    'No Addiction': '#43e97b',
+                    'None': '#43e97b',
+                    'Mild': '#ffd700',
+                    'Moderate': '#ff9500',
+                    'Severe': '#ff5252'
+                };
+                
+                const riskEmoji = {
+                    'No Addiction': 'fa-check-circle',
+                    'None': 'fa-check-circle',
+                    'Mild': 'fa-exclamation-triangle',
+                    'Moderate': 'fa-exclamation-circle',
+                    'Severe': 'fa-times-circle'
+                };
+                
+                const displayRisk = response.prediction === 'No Addiction' || response.prediction === 'None' ? 'No Addiction' : response.prediction;
+                const displayColor = riskColor[displayRisk] || '#43e97b';
+                const displayIcon = riskEmoji[displayRisk] || 'fa-check-circle';
+                
+                let resultHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Record added successfully! ID: #${response.record_id}</span>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, ${displayColor} 0%, ${displayColor} 100%); 
+                                color: white; border-radius: 12px; padding: 2rem; text-align: center; margin: 1.5rem 0; box-shadow: 0 8px 24px rgba(67, 233, 123, 0.18); border: 1px solid rgba(67, 233, 123, 0.35);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;"><i class="fas ${displayIcon}"></i></div>
+                        <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">${displayRisk} Risk</h2>
+                        <p style="font-size: 1.2rem;">Addiction Probability: <strong>${response.probability}%</strong></p>
+                    </div>
+                    
+                    <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">Record Details</h3>
+                        <ul style="list-style: none;">
+                            <li style="padding: 0.5rem 0;"><strong>Record ID:</strong> #${response.record_id}</li>
+                            <li style="padding: 0.5rem 0;"><strong>Daily Screen Time:</strong> ${formData.daily_screen_time_hours} hours</li>
+                            <li style="padding: 0.5rem 0;"><strong>Sleep Hours:</strong> ${formData.sleep_hours} hours</li>
+                            <li style="padding: 0.5rem 0;"><strong>Stress Level:</strong> ${formData.stress_level}</li>
+                            <li style="padding: 0.5rem 0;"><strong>App Opens per Day:</strong> ${formData.app_opens_per_day}</li>
+                        </ul>
+                    </div>
+                `;
+                
+                document.getElementById('predictionResult').innerHTML = resultHTML;
+                
+                // Display recommendations
+                let recommendationsHTML = '<div style="margin-top: 1.5rem;"><h3 style="color: #667eea; margin-bottom: 1rem;">Personalized Recommendations</h3>';
+                
+                if (response.recommendations && response.recommendations.length > 0) {
+                    recommendationsHTML += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">';
+                    
+                    response.recommendations.forEach(rec => {
+                        const alertClass = {
+                            'success': 'alert-success',
+                            'action': 'alert-info',
+                            'warning': 'alert-warning'
+                        }[rec.type] || 'alert-info';
+                        
+                        recommendationsHTML += `
+                            <div class="alert ${alertClass}">
+                                <span style="font-size: 1.5rem;">${rec.icon}</span>
+                                <span>${rec.text}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    recommendationsHTML += '</div>';
+                }
+                
+                recommendationsHTML += '</div>';
+                document.getElementById('recommendationsDiv').innerHTML = recommendationsHTML;
+                
+                document.getElementById('resultsSection').style.display = 'block';
+                
+                // Auto-scroll to prediction result
+                document.getElementById('predictionResult').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+                
+                // Reset form after successful submission
+                document.getElementById('addRecordForm').reset();
+            } else {
+                alert('Error: ' + (response.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error adding record: ' + error.message);
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+        }
+    });
+
+    // Load Sample Data function
+    async function loadSampleData() {
+        try {
+            const response = await apiCall('/api/records/sample_data/', 'GET');
+            
+            if (response.success) {
+                const sample = response.sample_data;
+                
+                // Fill the form with sample data
+                document.getElementById('age').value = sample.age;
+                document.getElementById('gender').value = sample.gender;
+                document.getElementById('daily_screen_time_hours').value = sample.daily_screen_time_hours;
+                document.getElementById('social_media_hours').value = sample.social_media_hours;
+                document.getElementById('gaming_hours').value = sample.gaming_hours;
+                document.getElementById('work_study_hours').value = sample.work_study_hours;
+                document.getElementById('sleep_hours').value = sample.sleep_hours;
+                document.getElementById('notifications_per_day').value = sample.notifications_per_day;
+                document.getElementById('app_opens_per_day').value = sample.app_opens_per_day;
+                document.getElementById('weekend_screen_time').value = sample.weekend_screen_time;
+                document.getElementById('stress_level').value = sample.stress_level;
+                document.getElementById('academic_work_impact').value = sample.academic_work_impact;
+                
+                // Show success message
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-info';
+                alertDiv.innerHTML = `<i class="fas fa-check-circle"></i> Sample user data loaded successfully!`;
+                alertDiv.style.position = 'fixed';
+                alertDiv.style.top = '20px';
+                alertDiv.style.right = '20px';
+                alertDiv.style.zIndex = '9999';
+                document.body.appendChild(alertDiv);
+                
+                // Remove alert after 3 seconds
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 3000);
+            } else {
+                alert('Error loading sample data: ' + (response.error || 'Unknown error'));
+            }
+        } catch (error) {
+            alert('Error loading sample data: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}

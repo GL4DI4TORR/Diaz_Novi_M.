@@ -1,0 +1,665 @@
+{% extends 'prediction/base.html' %}
+
+{% block title %}Records - Smartphone Addiction Detection System{% endblock %}
+
+{% block content %}
+<h1 class="page-title">
+    <i class="fas fa-list"></i> Prediction Records
+</h1>
+
+<p style="font-size: 1rem; color: #666; margin: 1rem 0;">
+    Browse all addiction predictions made by the system.
+</p>
+
+<!-- Dataset Controls -->
+<div style="display: flex; gap: 1rem; margin: 1.5rem 0; flex-wrap: wrap;">
+    <button id="clearRecordsBtn" style="
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(245, 87, 108, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+        <i class="fas fa-trash"></i> Clear All Records
+    </button>
+</div>
+
+<!-- Status Messages -->
+<div id="statusMessage" style="display: none; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: bold;"></div>
+
+{% if records %}
+    <div style="overflow-x: auto; margin-top: 1.5rem;">
+        <table>
+            <thead>
+                <tr>
+                    <th><i class="fas fa-id-card"></i> ID</th>
+                    <th><i class="fas fa-birthday-cake"></i> Age</th>
+                    <th><i class="fas fa-venus-mars"></i> Gender</th>
+                    <th><i class="fas fa-clock"></i> Screen Time (hrs)</th>
+                    <th><i class="fas fa-moon"></i> Sleep (hrs)</th>
+                    <th><i class="fas fa-head-side-virus"></i> Risk Level</th>
+                    <th><i class="fas fa-percentage"></i> Probability</th>
+                    <th><i class="fas fa-calendar"></i> Date</th>
+                    <th><i class="fas fa-cogs"></i> Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td><strong>#{{ record.id }}</strong></td>
+                    <td>{{ record.age }}</td>
+                    <td>{{ record.gender }}</td>
+                    <td>{{ record.daily_screen_time_hours|floatformat:1 }}</td>
+                    <td>{{ record.sleep_hours|floatformat:1 }}</td>
+                    <td>
+                        {% if record.predicted_addiction_risk == 'None' or record.predicted_addiction_risk == 'No Addiction' %}
+                            <span style="background: #e8f5e9; color: #2e7d32; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: bold;">🟢 None</span>
+                        {% elif record.predicted_addiction_risk == 'Mild' %}
+                            <span style="background: #fff3e0; color: #f57f17; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: bold;">🟡 Mild</span>
+                        {% elif record.predicted_addiction_risk == 'Moderate' %}
+                            <span style="background: #ffe0b2; color: #e65100; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: bold;">🟠 Moderate</span>
+                        {% elif record.predicted_addiction_risk == 'Severe' %}
+                            <span style="background: #ffebee; color: #c62828; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: bold;">🔴 Severe</span>
+                        {% else %}
+                            <span style="background: #f5f5f5; color: #666; padding: 0.3rem 0.6rem; border-radius: 6px; font-weight: bold;">❓ {{ record.predicted_addiction_risk }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ record.addiction_probability_percent|floatformat:1 }}%</strong>
+                    </td>
+                    <td>{{ record.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                            <button onclick="editRecord({{ record.id }})" class="btn-edit">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button onclick="deleteRecord({{ record.id }})" class="btn-delete">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin: 2rem 0; flex-wrap: wrap;">
+        <!-- Previous Button -->
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" style="
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(102, 126, 234, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+            <i class="fas fa-chevron-left"></i> Previous
+        </a>
+        {% else %}
+        <span style="
+            padding: 0.75rem 1rem;
+            background: #e0e0e0;
+            color: #999;
+            border-radius: 8px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        ">
+            <i class="fas fa-chevron-left"></i> Previous
+        </span>
+        {% endif %}
+        
+        <!-- Page Numbers -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <span style="
+                    padding: 0.75rem 1rem;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    min-width: 2.5rem;
+                    text-align: center;
+                ">{{ num }}</span>
+                {% else %}
+                <a href="?page={{ num }}" style="
+                    padding: 0.75rem 1rem;
+                    background: #f8f9fa;
+                    color: #667eea;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    min-width: 2.5rem;
+                    text-align: center;
+                    border: 1px solid #e9ecef;
+                    transition: all 0.3s ease;
+                " onmouseover="this.style.background='#667eea'; this.style.color='white'" onmouseout="this.style.background='#f8f9fa'; this.style.color='#667eea'">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <!-- Next Button -->
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" style="
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(102, 126, 234, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+            Next <i class="fas fa-chevron-right"></i>
+        </a>
+        {% else %}
+        <span style="
+            padding: 0.75rem 1rem;
+            background: #e0e0e0;
+            color: #999;
+            border-radius: 8px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        ">
+            Next <i class="fas fa-chevron-right"></i>
+        </span>
+        {% endif %}
+    </div>
+    
+    <!-- Page Info -->
+    <div style="text-align: center; margin-bottom: 1rem; color: #666;">
+        <p>Page {{ page_obj.number }} of {{ paginator.num_pages }} | 
+           Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ paginator.count }} records</p>
+    </div>
+    {% endif %}
+    
+    <div style="background: #f5f5f5; padding: 1rem; border-radius: 8px; margin-top: 1.5rem; text-align: center;">
+        <p style="color: #666;">Total: <strong>{{ paginator.count }}</strong> records in database</p>
+    </div>
+    
+{% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        <span>No records found. <a href="{% url 'prediction:predict' %}">Make your first prediction</a> or load the sample dataset above.</span>
+    </div>
+{% endif %}
+
+<script>
+// Load dataset function
+async function loadDataset() {
+    const statusDiv = document.getElementById('statusMessage');
+    const btn = document.getElementById('loadDatasetBtn');
+    
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    statusDiv.style.display = 'block';
+    statusDiv.textContent = '⏳ Loading dataset...';
+    statusDiv.style.background = '#fff3cd';
+    statusDiv.style.color = '#856404';
+    
+    try {
+        const response = await fetch('/api/records/load_dataset/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.records_loaded > 0) {
+            statusDiv.textContent = `✅ ${data.message}`;
+            statusDiv.style.background = '#d4edda';
+            statusDiv.style.color = '#155724';
+            
+            // Reload page after 2 seconds
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            statusDiv.textContent = `ℹ️ ${data.message}`;
+            statusDiv.style.background = '#d1ecf1';
+            statusDiv.style.color = '#0c5460';
+        }
+    } catch (error) {
+        statusDiv.textContent = `❌ Error loading dataset: ${error.message}`;
+        statusDiv.style.background = '#f8d7da';
+        statusDiv.style.color = '#721c24';
+    } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    }
+}
+
+// Clear records function
+async function clearRecords() {
+    if (!confirm('Are you sure you want to delete all records? This cannot be undone.')) {
+        return;
+    }
+    
+    const statusDiv = document.getElementById('statusMessage');
+    const btn = document.getElementById('clearRecordsBtn');
+    
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    statusDiv.style.display = 'block';
+    statusDiv.textContent = '⏳ Clearing records...';
+    statusDiv.style.background = '#fff3cd';
+    statusDiv.style.color = '#856404';
+    
+    try {
+        const response = await fetch('/api/records/clear_records/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            statusDiv.textContent = `✅ ${data.message}`;
+            statusDiv.style.background = '#d4edda';
+            statusDiv.style.color = '#155724';
+            
+            // Reload page after 2 seconds
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            statusDiv.textContent = `❌ Error: ${data.message}`;
+            statusDiv.style.background = '#f8d7da';
+            statusDiv.style.color = '#721c24';
+        }
+    } catch (error) {
+        statusDiv.textContent = `❌ Error clearing records: ${error.message}`;
+        statusDiv.style.background = '#f8d7da';
+        statusDiv.style.color = '#721c24';
+    } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+    }
+}
+
+// Edit record function
+async function editRecord(recordId) {
+    try {
+        const response = await apiCall(`/api/records/${recordId}/`, 'GET');
+        
+        if (response.success) {
+            // Populate edit modal with record data
+            const record = response.record;
+            document.getElementById('editRecordId').value = record.id;
+            document.getElementById('editAge').value = record.age;
+            document.getElementById('editGender').value = record.gender;
+            document.getElementById('editDailyScreenTime').value = record.daily_screen_time_hours;
+            document.getElementById('editSocialMedia').value = record.social_media_hours;
+            document.getElementById('editGaming').value = record.gaming_hours;
+            document.getElementById('editWorkStudy').value = record.work_study_hours;
+            document.getElementById('editSleep').value = record.sleep_hours;
+            document.getElementById('editNotifications').value = record.notifications_per_day;
+            document.getElementById('editAppOpens').value = record.app_opens_per_day;
+            document.getElementById('editWeekendTime').value = record.weekend_screen_time;
+            document.getElementById('editStress').value = record.stress_level;
+            document.getElementById('editImpact').value = record.academic_work_impact;
+            
+            // Show modal
+            document.getElementById('editModal').style.display = 'block';
+        } else {
+            alert('Error loading record: ' + (response.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error loading record: ' + error.message);
+    }
+}
+
+// Delete record function
+async function deleteRecord(recordId) {
+    if (!confirm(`Are you sure you want to delete record #${recordId}? This cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        const response = await apiCall(`/api/records/${recordId}/`, 'DELETE');
+        
+        if (response.success) {
+            alert('Record deleted successfully!');
+            location.reload();
+        } else {
+            alert('Error deleting record: ' + (response.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error deleting record: ' + error.message);
+    }
+}
+
+// Save edited record
+async function saveEditedRecord() {
+    const recordId = document.getElementById('editRecordId').value;
+    
+    const formData = {
+        age: parseInt(document.getElementById('editAge').value),
+        gender: document.getElementById('editGender').value,
+        daily_screen_time_hours: parseFloat(document.getElementById('editDailyScreenTime').value),
+        social_media_hours: parseFloat(document.getElementById('editSocialMedia').value),
+        gaming_hours: parseFloat(document.getElementById('editGaming').value),
+        work_study_hours: parseFloat(document.getElementById('editWorkStudy').value),
+        sleep_hours: parseFloat(document.getElementById('editSleep').value),
+        notifications_per_day: parseInt(document.getElementById('editNotifications').value),
+        app_opens_per_day: parseInt(document.getElementById('editAppOpens').value),
+        weekend_screen_time: parseFloat(document.getElementById('editWeekendTime').value),
+        stress_level: document.getElementById('editStress').value,
+        academic_work_impact: document.getElementById('editImpact').value
+    };
+    
+    try {
+        const response = await apiCall(`/api/records/${recordId}/`, 'PUT', formData);
+        
+        if (response.success) {
+            alert('Record updated successfully!');
+            closeModal();
+            location.reload();
+        } else {
+            alert('Error updating record: ' + (response.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error updating record: ' + error.message);
+    }
+}
+
+// Close modal
+function closeModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('editModal');
+    if (event.target == modal) {
+        closeModal();
+    }
+}
+
+// Add event listeners
+document.getElementById('loadDatasetBtn').addEventListener('click', loadDataset);
+document.getElementById('clearRecordsBtn').addEventListener('click', clearRecords);
+</script>
+
+<style>
+.btn-edit {
+    padding: 0.4rem 0.8rem;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(79, 172, 254, 0.3);
+}
+
+.btn-delete {
+    padding: 0.4rem 0.8rem;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn-delete:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(245, 87, 108, 0.3);
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #667eea;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #667eea;
+    margin: 0;
+}
+
+.close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.modal-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.modal-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.modal-form input, 
+.modal-form select {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.modal-form input:focus, 
+.modal-form select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    color: white;
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+}
+</style>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                <i class="fas fa-edit"></i> Edit Record
+            </h2>
+            <button class="close" onclick="closeModal()">&times;</button>
+        </div>
+        
+        <form id="editForm" class="modal-form">
+            <input type="hidden" id="editRecordId">
+            
+            <div class="form-group">
+                <label for="editAge">Age</label>
+                <input type="number" id="editAge" min="5" max="100" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editGender">Gender</label>
+                <select id="editGender" required>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="editDailyScreenTime">Daily Screen Time (hours)</label>
+                <input type="text" id="editDailyScreenTime" pattern="^\d+(\.\d+)?$" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editSocialMedia">Social Media Hours</label>
+                <input type="text" id="editSocialMedia" pattern="^\d+(\.\d+)?$" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editGaming">Gaming Hours</label>
+                <input type="text" id="editGaming" pattern="^\d+(\.\d+)?$" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editWorkStudy">Work/Study Hours</label>
+                <input type="text" id="editWorkStudy" pattern="^\d+(\.\d+)?$" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editSleep">Sleep Hours</label>
+                <input type="text" id="editSleep" pattern="^\d+(\.\d+)?$" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editNotifications">Notifications per Day</label>
+                <input type="number" id="editNotifications" min="0" max="10000" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editAppOpens">App Opens per Day</label>
+                <input type="number" id="editAppOpens" min="0" max="10000" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editWeekendTime">Weekend Screen Time (hours)</label>
+                <input type="text" id="editWeekendTime" pattern="^\d+(\.\d+)?$" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="editStress">Stress Level</label>
+                <select id="editStress" required>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="editImpact">Academic/Work Impact</label>
+                <select id="editImpact" required>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+        </form>
+        
+        <div class="modal-buttons">
+            <button type="button" class="btn-secondary" onclick="closeModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" class="btn-primary" onclick="saveEditedRecord()">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

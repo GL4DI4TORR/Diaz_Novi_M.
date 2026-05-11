@@ -1,0 +1,115 @@
+{% extends 'prediction/base.html' %}
+
+{% block title %}Home - Smartphone Addiction Detection System{% endblock %}
+
+{% block content %}
+<h1 class="page-title">
+    <i class="fas fa-mobile-alt"></i> Smartphone Addiction Detection
+</h1>
+
+<p style="font-size: 1.1rem; color: #666; margin: 1.5rem 0;">
+    Welcome to the Smartphone Addiction Detection System. This AI-powered application helps analyze and predict 
+    smartphone addiction risk based on usage patterns and behavioral data.
+</p>
+
+<div class="grid" style="margin-top: 2rem;">
+    <div class="card">
+        <div class="card-title">
+            <i class="fas fa-brain" style="color: #667eea;"></i> Predict Risk
+        </div>
+        <p>Analyze smartphone usage patterns and get an instant addiction risk assessment with personalized recommendations.</p>
+        <a href="{% url 'prediction:predict' %}" class="btn btn-primary" style="margin-top: 1rem;">
+            <i class="fas fa-arrow-right"></i> Start Prediction
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-title">
+            <i class="fas fa-chart-bar" style="color: #f5576c;"></i> View Dashboard
+        </div>
+        <p>View comprehensive statistics and analytics about all predictions made by the system.</p>
+        <a href="{% url 'prediction:dashboard' %}" class="btn btn-primary" style="margin-top: 1rem;">
+            <i class="fas fa-arrow-right"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-title">
+            <i class="fas fa-list" style="color: #38f9d7;"></i> View Records
+        </div>
+        <p>Browse and review all previous predictions and their detailed analysis results.</p>
+        <a href="{% url 'prediction:records' %}" class="btn btn-primary" style="margin-top: 1rem;">
+            <i class="fas fa-arrow-right"></i> Records
+        </a>
+    </div>
+</div>
+
+<div style="background: #f5f5f5; border-radius: 12px; padding: 2rem; margin-top: 2rem;">
+    <h2 style="margin-bottom: 1rem; color: #667eea;">How It Works</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+        <div>
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">
+                <i class="fas fa-list-check"></i> Input Data
+            </h3>
+            <p>Provide your daily smartphone usage statistics including screen time, app usage, sleep, and stress levels.</p>
+        </div>
+        
+        <div>
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">
+                <i class="fas fa-cogs"></i> Process
+            </h3>
+            <p>Our trained machine learning model analyzes your data and computes your addiction risk score.</p>
+        </div>
+        
+        <div>
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">
+                <i class="fas fa-lightbulb"></i> Recommendations
+            </h3>
+            <p>Receive personalized recommendations to improve your smartphone habits and digital wellness.</p>
+        </div>
+    </div>
+</div>
+
+<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 2rem; margin-top: 2rem;">
+    <h2 style="margin-bottom: 1rem;">Addiction Risk Levels</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div>
+            <h3>🟢 None</h3>
+            <p>No addiction risk detected. Healthy usage patterns.</p>
+        </div>
+        <div>
+            <h3>🟡 Mild</h3>
+            <p>Minor signs of problematic usage. Some intervention recommended.</p>
+        </div>
+        <div>
+            <h3>🟠 Moderate</h3>
+            <p>Significant addiction indicators. Professional guidance suggested.</p>
+        </div>
+        <div>
+            <h3>🔴 Severe</h3>
+            <p>High addiction risk. Immediate intervention strongly recommended.</p>
+        </div>
+    </div>
+</div>
+
+<!-- System Status Information -->
+<div style="margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #e0e0e0;">
+    {% if model_info.model_loaded %}
+        <div class="alert alert-success" style="opacity: 0.8;">
+            <i class="fas fa-check-circle"></i>
+            <span><strong>System Ready:</strong> {{ model_info.model_name }} model is loaded and ready to make predictions.</span>
+        </div>
+        <div class="alert alert-info" style="margin-top: 1rem; opacity: 0.8;">
+            <i class="fas fa-info-circle"></i>
+            <span><strong>Model Info:</strong> {{ model_info.features_count }} features loaded | Threshold: {{ model_info.threshold }}</span>
+        </div>
+    {% else %}
+        <div class="alert alert-warning" style="opacity: 0.8;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span><strong>Warning:</strong> Machine Learning model not loaded. Using fallback model.</span>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
