@@ -14,7 +14,6 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('predict/', views.predict_page, name='predict'),
     path('records/', views.records_page, name='records'),
-    path('add-record/', views.add_record_page, name='add_record'),
     
     # API endpoints
     path('api/', include(router.urls)),

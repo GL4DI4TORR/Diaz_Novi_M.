@@ -8,7 +8,7 @@
 </h1>
 
 <p style="font-size: 1rem; color: #666; margin: 1rem 0;">
-    Fill in your daily smartphone usage information to get an instant addiction risk assessment.
+    Search for and analyze smartphone usage data from the original dataset. Use the search feature to find existing records by ID or UID.
 </p>
 
 <!-- Search Section -->
@@ -31,6 +31,7 @@
 
 <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
     <form id="predictionForm">
+        <input type="hidden" id="source_record_id" name="source_record_id" value="">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
             
             <!-- User Info Section -->
@@ -152,9 +153,6 @@
         </div>
         
         <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-            <button type="button" class="btn btn-info" onclick="loadSampleData()" style="flex: 1;">
-                <i class="fas fa-file-alt"></i> Fill Form with Sample Data
-            </button>
             <button type="submit" class="btn btn-primary" style="flex: 1;">
                 <i class="fas fa-magic"></i> Predict Addiction Risk
             </button>
@@ -186,6 +184,7 @@
         
         // Collect form data and convert to numbers
         const formData = {
+            source_record_id: document.getElementById('source_record_id').value || null,
             age: parseInt(document.getElementById('age').value),
             gender: document.getElementById('gender').value,
             daily_screen_time_hours: parseFloat(document.getElementById('daily_screen_time_hours').value),
@@ -208,19 +207,24 @@
             const response = await apiCall('/api/records/predict/', 'POST', formData);
             
             if (response.success) {
-                // Display result
+                // Normalize response values to avoid undefined/NaN output
+                const predictionLabel = response.prediction || response.risk_level || response.predicted_addiction_risk || 'Unknown';
+                const probabilityValue = Number.isFinite(response.probability) ? response.probability : parseFloat(response.probability) || 0;
+
                 const riskColor = {
                     'No Addiction': '#43e97b',
                     'Mild': '#ffd700',
                     'Moderate': '#ff9500',
-                    'Severe': '#ff5252'
+                    'Severe': '#ff5252',
+                    'Unknown': '#999999'
                 };
                 
                 const riskEmoji = {
                     'No Addiction': '🟢',
                     'Mild': '🟡',
                     'Moderate': '🟠',
-                    'Severe': '🔴'
+                    'Severe': '🔴',
+                    'Unknown': '❓'
                 };
                 
                 let resultHTML = `
@@ -229,11 +233,11 @@
                         <span>Prediction completed successfully!</span>
                     </div>
                     
-                    <div style="background: linear-gradient(135deg, ${riskColor[response.prediction]} 0%, ${riskColor[response.prediction]} 100%); 
+                    <div style="background: linear-gradient(135deg, ${riskColor[predictionLabel]} 0%, ${riskColor[predictionLabel]} 100%); 
                                 color: white; border-radius: 12px; padding: 2rem; text-align: center; margin: 1.5rem 0;">
-                        <div style="font-size: 3rem; margin-bottom: 1rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">${riskEmoji[response.prediction]}</div>
-                        <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">${response.prediction} Risk</h2>
-                        <p style="font-size: 1.2rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">Addiction Probability: <strong style="color: white;">${response.probability}%</strong></p>
+                        <div style="font-size: 3rem; margin-bottom: 1rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">${riskEmoji[predictionLabel]}</div>
+                        <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">${predictionLabel} Risk</h2>
+                        <p style="font-size: 1.2rem; color: white; text-shadow: 1px 1px rgba(0,0,0,0.8);">Addiction Probability: <strong style="color: white;">${probabilityValue}%</strong></p>
                     </div>
                     
                     <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
@@ -305,16 +309,13 @@
         }
         
         // Parse search input - handle both numeric IDs and UID format
-        let searchId;
-        if (searchInput.startsWith('U') || searchInput.startsWith('u')) {
-            // Extract numeric part from UID format (e.g., U00123 -> 123)
-            searchId = parseInt(searchInput.substring(1));
-        } else {
-            // Direct numeric ID
-            searchId = parseInt(searchInput);
+        let searchId = null;
+        const digits = searchInput.match(/\d+/g);
+        if (digits) {
+            searchId = parseInt(digits.join(''));
         }
         
-        if (isNaN(searchId)) {
+        if (isNaN(searchId) || searchId === null) {
             searchResult.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times"></i> Invalid ID format. Please enter a number or UID format (e.g., 1234 or U00123).</div>';
             searchResult.style.display = 'block';
             return;
@@ -343,6 +344,7 @@
                 document.getElementById('stress_level').value = record.stress_level;
                 document.getElementById('academic_work_impact').value = record.academic_work_impact;
                 
+                document.getElementById('source_record_id').value = record.id;
                 searchResult.innerHTML = `
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle"></i>
@@ -356,7 +358,8 @@
                 // Scroll to form
                 document.getElementById('predictionForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
-                searchResult.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Record not found: ${response.error || 'Unknown error'}</div>`;
+                document.getElementById('source_record_id').value = '';
+            searchResult.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Record not found: ${response.error || 'Unknown error'}</div>`;
             }
         } catch (error) {
             searchResult.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Error searching: ${error.message}</div>`;

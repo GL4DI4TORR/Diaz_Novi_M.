@@ -25,7 +25,7 @@
         align-items: center;
         gap: 0.5rem;
         transition: all 0.3s ease;
-    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(245, 87, 108, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+    ' onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 8px 16px rgba(245, 87, 108, 0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'none\'">
         <i class="fas fa-trash"></i> Clear All Records
     </button>
 </div>
@@ -76,8 +76,8 @@
                     <td>{{ record.created_at|date:"Y-m-d H:i" }}</td>
                     <td>
                         <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                            <button onclick="editRecord({{ record.id }})" class="btn-edit">
-                                <i class="fas fa-edit"></i> Edit
+                            <button onclick="viewRecord({{ record.id }})" class="btn-view" title="View record details">
+                                <i class="fas fa-eye"></i> View
                             </button>
                             <button onclick="deleteRecord({{ record.id }})" class="btn-delete">
                                 <i class="fas fa-trash"></i> Delete
@@ -299,37 +299,59 @@ async function clearRecords() {
     }
 }
 
-// Edit record function
-async function editRecord(recordId) {
+// View record function (read-only)
+async function viewRecord(recordId) {
     try {
-        const response = await apiCall(`/api/records/${recordId}/`, 'GET');
+        const response = await fetch(`/api/records/${recordId}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
         
-        if (response.success) {
-            // Populate edit modal with record data
-            const record = response.record;
-            document.getElementById('editRecordId').value = record.id;
-            document.getElementById('editAge').value = record.age;
-            document.getElementById('editGender').value = record.gender;
-            document.getElementById('editDailyScreenTime').value = record.daily_screen_time_hours;
-            document.getElementById('editSocialMedia').value = record.social_media_hours;
-            document.getElementById('editGaming').value = record.gaming_hours;
-            document.getElementById('editWorkStudy').value = record.work_study_hours;
-            document.getElementById('editSleep').value = record.sleep_hours;
-            document.getElementById('editNotifications').value = record.notifications_per_day;
-            document.getElementById('editAppOpens').value = record.app_opens_per_day;
-            document.getElementById('editWeekendTime').value = record.weekend_screen_time;
-            document.getElementById('editStress').value = record.stress_level;
-            document.getElementById('editImpact').value = record.academic_work_impact;
-            
-            // Show modal
-            document.getElementById('editModal').style.display = 'block';
+        const json = await response.json();
+        const record = json.record || json;
+        
+        if (response.ok && record) {
+            document.getElementById('modalRecordId').textContent = record.id || 'N/A';
+            document.getElementById('modalAge').textContent = record.age ?? 'N/A';
+            document.getElementById('modalGender').textContent = record.gender || 'N/A';
+            document.getElementById('modalDailyScreen').textContent = record.daily_screen_time_hours ?? 'N/A';
+            document.getElementById('modalSocialMedia').textContent = record.social_media_hours ?? 'N/A';
+            document.getElementById('modalGaming').textContent = record.gaming_hours ?? 'N/A';
+            document.getElementById('modalWorkStudy').textContent = record.work_study_hours ?? 'N/A';
+            document.getElementById('modalSleep').textContent = record.sleep_hours ?? 'N/A';
+            document.getElementById('modalStress').textContent = record.stress_level ?? 'N/A';
+            document.getElementById('modalImpact').textContent = record.academic_work_impact ?? 'N/A';
+            document.getElementById('modalNotifications').textContent = record.notifications_per_day ?? 'N/A';
+            document.getElementById('modalAppOpens').textContent = record.app_opens_per_day ?? 'N/A';
+            document.getElementById('modalWeekend').textContent = record.weekend_screen_time ?? 'N/A';
+            document.getElementById('modalRisk').textContent = record.predicted_addiction_risk || 'N/A';
+            document.getElementById('modalProbability').textContent = record.addiction_probability !== undefined
+                ? (record.addiction_probability * 100).toFixed(1)
+                : 'N/A';
+            document.getElementById('modalCreated').textContent = record.created_at
+                ? new Date(record.created_at).toLocaleString()
+                : 'N/A';
+            document.getElementById('recordModal').style.display = 'block';
         } else {
-            alert('Error loading record: ' + (response.error || 'Unknown error'));
+            alert('Error loading record: ' + (json.error || 'Record not found'));
         }
     } catch (error) {
         alert('Error loading record: ' + error.message);
     }
 }
+
+function closeModal() {
+    document.getElementById('recordModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('recordModal');
+    if (event.target === modal) {
+        closeModal();
+    }
+};
 
 // Delete record function
 async function deleteRecord(recordId) {
@@ -338,63 +360,23 @@ async function deleteRecord(recordId) {
     }
     
     try {
-        const response = await apiCall(`/api/records/${recordId}/`, 'DELETE');
+        const response = await fetch(`/api/records/${recordId}/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        });
         
-        if (response.success) {
+        if (response.ok || response.status === 204) {
             alert('Record deleted successfully!');
             location.reload();
         } else {
-            alert('Error deleting record: ' + (response.error || 'Unknown error'));
+            const data = await response.json();
+            alert('Error deleting record: ' + (data.detail || 'Unknown error'));
         }
     } catch (error) {
         alert('Error deleting record: ' + error.message);
-    }
-}
-
-// Save edited record
-async function saveEditedRecord() {
-    const recordId = document.getElementById('editRecordId').value;
-    
-    const formData = {
-        age: parseInt(document.getElementById('editAge').value),
-        gender: document.getElementById('editGender').value,
-        daily_screen_time_hours: parseFloat(document.getElementById('editDailyScreenTime').value),
-        social_media_hours: parseFloat(document.getElementById('editSocialMedia').value),
-        gaming_hours: parseFloat(document.getElementById('editGaming').value),
-        work_study_hours: parseFloat(document.getElementById('editWorkStudy').value),
-        sleep_hours: parseFloat(document.getElementById('editSleep').value),
-        notifications_per_day: parseInt(document.getElementById('editNotifications').value),
-        app_opens_per_day: parseInt(document.getElementById('editAppOpens').value),
-        weekend_screen_time: parseFloat(document.getElementById('editWeekendTime').value),
-        stress_level: document.getElementById('editStress').value,
-        academic_work_impact: document.getElementById('editImpact').value
-    };
-    
-    try {
-        const response = await apiCall(`/api/records/${recordId}/`, 'PUT', formData);
-        
-        if (response.success) {
-            alert('Record updated successfully!');
-            closeModal();
-            location.reload();
-        } else {
-            alert('Error updating record: ' + (response.error || 'Unknown error'));
-        }
-    } catch (error) {
-        alert('Error updating record: ' + error.message);
-    }
-}
-
-// Close modal
-function closeModal() {
-    document.getElementById('editModal').style.display = 'none';
-}
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const modal = document.getElementById('editModal');
-    if (event.target == modal) {
-        closeModal();
     }
 }
 
@@ -403,24 +385,34 @@ document.getElementById('loadDatasetBtn').addEventListener('click', loadDataset)
 document.getElementById('clearRecordsBtn').addEventListener('click', clearRecords);
 </script>
 
+<div id="recordModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Record Details</h2>
+            <button class="close" type="button" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-row"><strong>ID:</strong> <span id="modalRecordId"></span></div>
+            <div class="modal-row"><strong>Age:</strong> <span id="modalAge"></span></div>
+            <div class="modal-row"><strong>Gender:</strong> <span id="modalGender"></span></div>
+            <div class="modal-row"><strong>Daily Screen Time:</strong> <span id="modalDailyScreen"></span> hrs</div>
+            <div class="modal-row"><strong>Social Media Hours:</strong> <span id="modalSocialMedia"></span> hrs</div>
+            <div class="modal-row"><strong>Gaming Hours:</strong> <span id="modalGaming"></span> hrs</div>
+            <div class="modal-row"><strong>Work/Study Hours:</strong> <span id="modalWorkStudy"></span> hrs</div>
+            <div class="modal-row"><strong>Sleep Hours:</strong> <span id="modalSleep"></span> hrs</div>
+            <div class="modal-row"><strong>Stress Level:</strong> <span id="modalStress"></span></div>
+            <div class="modal-row"><strong>Academic/Work Impact:</strong> <span id="modalImpact"></span></div>
+            <div class="modal-row"><strong>Notifications per Day:</strong> <span id="modalNotifications"></span></div>
+            <div class="modal-row"><strong>App Opens per Day:</strong> <span id="modalAppOpens"></span></div>
+            <div class="modal-row"><strong>Weekend Screen Time:</strong> <span id="modalWeekend"></span> hrs</div>
+            <div class="modal-row"><strong>Addiction Risk:</strong> <span id="modalRisk"></span></div>
+            <div class="modal-row"><strong>Probability:</strong> <span id="modalProbability"></span>%</div>
+            <div class="modal-row"><strong>Created:</strong> <span id="modalCreated"></span></div>
+        </div>
+    </div>
+</div>
+
 <style>
-.btn-edit {
-    padding: 0.4rem 0.8rem;
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    font-weight: bold;
-    transition: all 0.3s ease;
-}
-
-.btn-edit:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(79, 172, 254, 0.3);
-}
-
 .btn-delete {
     padding: 0.4rem 0.8rem;
     background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -565,101 +557,5 @@ document.getElementById('clearRecordsBtn').addEventListener('click', clearRecord
     box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
 }
 </style>
-
-<!-- Edit Modal -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">
-                <i class="fas fa-edit"></i> Edit Record
-            </h2>
-            <button class="close" onclick="closeModal()">&times;</button>
-        </div>
-        
-        <form id="editForm" class="modal-form">
-            <input type="hidden" id="editRecordId">
-            
-            <div class="form-group">
-                <label for="editAge">Age</label>
-                <input type="number" id="editAge" min="5" max="100" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editGender">Gender</label>
-                <select id="editGender" required>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="editDailyScreenTime">Daily Screen Time (hours)</label>
-                <input type="text" id="editDailyScreenTime" pattern="^\d+(\.\d+)?$" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editSocialMedia">Social Media Hours</label>
-                <input type="text" id="editSocialMedia" pattern="^\d+(\.\d+)?$" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editGaming">Gaming Hours</label>
-                <input type="text" id="editGaming" pattern="^\d+(\.\d+)?$" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editWorkStudy">Work/Study Hours</label>
-                <input type="text" id="editWorkStudy" pattern="^\d+(\.\d+)?$" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editSleep">Sleep Hours</label>
-                <input type="text" id="editSleep" pattern="^\d+(\.\d+)?$" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editNotifications">Notifications per Day</label>
-                <input type="number" id="editNotifications" min="0" max="10000" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editAppOpens">App Opens per Day</label>
-                <input type="number" id="editAppOpens" min="0" max="10000" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editWeekendTime">Weekend Screen Time (hours)</label>
-                <input type="text" id="editWeekendTime" pattern="^\d+(\.\d+)?$" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="editStress">Stress Level</label>
-                <select id="editStress" required>
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label for="editImpact">Academic/Work Impact</label>
-                <select id="editImpact" required>
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
-                </select>
-            </div>
-        </form>
-        
-        <div class="modal-buttons">
-            <button type="button" class="btn-secondary" onclick="closeModal()">
-                <i class="fas fa-times"></i> Cancel
-            </button>
-            <button type="button" class="btn-primary" onclick="saveEditedRecord()">
-                <i class="fas fa-save"></i> Save Changes
-            </button>
-        </div>
-    </div>
-</div>
 
 {% endblock %}
