@@ -8,7 +8,7 @@
 </h1>
 
 <p style="font-size: 1rem; color: #666; margin: 1rem 0;">
-    Comprehensive analytics showing both original dataset and real-time predictions.
+    Comprehensive analytics showing only the original dataset.
 </p>
 
 <!-- Combined Data Container -->
@@ -26,16 +26,6 @@
             <div class="stat-value">{{ csv_total_records }}</div>
             <p style="color: #666;">Historical records from Kaggle</p>
         </div>
-        
-        <div class="card">
-            <div class="card-title">
-                <i class="fas fa-chart-line"></i> Real-Time Predictions
-                <span style="font-size: 0.7rem; color: #1976d2; margin-left: 0.5rem;">Live</span>
-            </div>
-            <div class="stat-value">{{ db_total_records }}</div>
-            <p style="color: #666;">New predictions via web app</p>
-        </div>
-        
         <div class="card">
             <div class="card-title">
                 <i class="fas fa-percentage"></i> Avg Probability
@@ -55,10 +45,6 @@
                 <div style="font-size: 1.1rem; font-weight: bold; color: #2e7d32;">{{ csv_addiction_distribution.None|default:0 }}</div>
                 <div style="color: #999; font-size: 0.8rem;">CSV: {{ csv_none_percentage|floatformat:1 }}%</div>
             </div>
-            <div style="text-align: center; padding: 1.2rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #43e97b;">
-                <div style="font-size: 1.1rem; font-weight: bold; color: #2e7d32;">{{ db_addiction_distribution.None|default:0 }}</div>
-                <div style="color: #999; font-size: 0.8rem;">Live: {{ db_none_percentage|floatformat:1 }}%</div>
-            </div>
         </div>
         
         <!-- Mild Risk -->
@@ -66,12 +52,8 @@
             <div style="text-align: center; padding: 1.2rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #ffd700;">
                 <div style="font-size: 1.8rem; color: #ffd700; margin-bottom: 0.5rem;">🟡</div>
                 <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.3rem;">Mild Risk</div>
-                <div style="font-size: 1.1rem; font-weight: bold; color: #f57f17;">{{ csv_addiction_distribution.Mild }}</div>
+                <div style="font-size: 1.1rem; font-weight: bold; color: #f57f17;">{{ csv_addiction_distribution.Mild|default:0 }}</div>
                 <div style="color: #999; font-size: 0.8rem;">CSV: {{ csv_mild_percentage|floatformat:1 }}%</div>
-            </div>
-            <div style="text-align: center; padding: 1.2rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #ffd700;">
-                <div style="font-size: 1.1rem; font-weight: bold; color: #f57f17;">{{ db_addiction_distribution.Mild }}</div>
-                <div style="color: #999; font-size: 0.8rem;">Live: {{ db_mild_percentage|floatformat:1 }}%</div>
             </div>
         </div>
         
@@ -80,12 +62,8 @@
             <div style="text-align: center; padding: 1.2rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #ff9500;">
                 <div style="font-size: 1.8rem; color: #ff9500; margin-bottom: 0.5rem;">🟠</div>
                 <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.3rem;">Moderate Risk</div>
-                <div style="font-size: 1.1rem; font-weight: bold; color: #e65100;">{{ csv_addiction_distribution.Moderate }}</div>
+                <div style="font-size: 1.1rem; font-weight: bold; color: #e65100;">{{ csv_addiction_distribution.Moderate|default:0 }}</div>
                 <div style="color: #999; font-size: 0.8rem;">CSV: {{ csv_moderate_percentage|floatformat:1 }}%</div>
-            </div>
-            <div style="text-align: center; padding: 1.2rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #ff9500;">
-                <div style="font-size: 1.1rem; font-weight: bold; color: #e65100;">{{ db_addiction_distribution.Moderate }}</div>
-                <div style="color: #999; font-size: 0.8rem;">Live: {{ db_moderate_percentage|floatformat:1 }}%</div>
             </div>
         </div>
         
@@ -94,12 +72,8 @@
             <div style="text-align: center; padding: 1.2rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #ff5252;">
                 <div style="font-size: 1.8rem; color: #ff5252; margin-bottom: 0.5rem;">🔴</div>
                 <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.3rem;">Severe Risk</div>
-                <div style="font-size: 1.1rem; font-weight: bold; color: #c62828;">{{ csv_addiction_distribution.Severe }}</div>
+                <div style="font-size: 1.1rem; font-weight: bold; color: #c62828;">{{ csv_addiction_distribution.Severe|default:0 }}</div>
                 <div style="color: #999; font-size: 0.8rem;">CSV: {{ csv_severe_percentage|floatformat:1 }}%</div>
-            </div>
-            <div style="text-align: center; padding: 1.2rem; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #ff5252;">
-                <div style="font-size: 1.1rem; font-weight: bold; color: #c62828;">{{ db_addiction_distribution.Severe }}</div>
-                <div style="color: #999; font-size: 0.8rem;">Live: {{ db_severe_percentage|floatformat:1 }}%</div>
             </div>
         </div>
     </div>
@@ -109,10 +83,6 @@
         <div style="display: flex; align-items: center; gap: 0.5rem;">
             <div style="width: 12px; height: 12px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 2px;"></div>
             <span style="font-size: 0.8rem; color: #666;">Original Dataset</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <div style="width: 12px; height: 12px; background: #e3f2fd; border: 1px solid #bbdefb; border-radius: 2px;"></div>
-            <span style="font-size: 0.8rem; color: #666;">Real-Time Predictions</span>
         </div>
     </div>
 </div>

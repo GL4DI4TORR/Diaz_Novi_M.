@@ -256,6 +256,41 @@ class SmartphoneAddictionMLService:
         feature_array = np.array([feature_vector.get(feature, 0) for feature in self.features])
         return feature_array.reshape(1, -1)
     
+    def _create_feature_matrix(self, user_data_list: List[Dict]) -> np.ndarray:
+        """Create a feature matrix for batch prediction."""
+        rows = [self._create_feature_vector(user_data).flatten() for user_data in user_data_list]
+        return np.vstack(rows)
+
+    def predict_batch(self, user_data_list: List[Dict]) -> List[float]:
+        """Predict probabilities for a batch of user data."""
+        try:
+            if not user_data_list:
+                return []
+
+            feature_matrix = self._create_feature_matrix(user_data_list)
+            if self.scaler:
+                feature_matrix = self.scaler.transform(feature_matrix)
+
+            if hasattr(self.model, 'predict_proba'):
+                proba = self.model.predict_proba(feature_matrix)[:, 1]
+            else:
+                proba = self.model.predict(feature_matrix).astype(float)
+
+            return [float(p) for p in proba]
+        except Exception as e:
+            print(f"Error in batch prediction: {e}")
+            return [0.0] * len(user_data_list)
+
+    def map_probability_to_label(self, probability: float) -> str:
+        """Map a prediction probability to a consistent addiction label."""
+        if probability < 0.25:
+            return 'No Addiction'
+        if probability < 0.45:
+            return 'Mild'
+        if probability < 0.70:
+            return 'Moderate'
+        return 'Severe'
+
     def predict(self, user_data: Dict) -> Dict:
         """
         Make prediction for smartphone addiction.
@@ -281,28 +316,18 @@ class SmartphoneAddictionMLService:
                 prediction_proba = self.model.predict_proba(feature_vector_scaled)[0][1]
             else:
                 prediction_proba = float(self.model.predict(feature_vector_scaled)[0])
-            
-            # Apply threshold
-            threshold = self.metadata.get('best_threshold', 0.5) if self.metadata else 0.5
-            prediction = int(prediction_proba >= threshold)
-            
-            # Determine risk level - adjusted for more balanced distribution
-            if prediction_proba < 0.25:
-                risk_level = 'LOW'
-            elif prediction_proba < 0.45:
-                risk_level = 'MEDIUM'
-            elif prediction_proba < 0.7:
-                risk_level = 'HIGH'
-            else:
-                risk_level = 'CRITICAL'
-            
+
+            probability = float(prediction_proba)
+            prediction_label = self.map_probability_to_label(probability)
+            confidence = float(max(probability, 1 - probability) * 100)
+
             return {
-                'prediction': prediction,
-                'probability': float(prediction_proba),
-                'risk_level': risk_level,
-                'confidence': float(max(prediction_proba, 1 - prediction_proba) * 100),
+                'prediction': prediction_label,
+                'probability': probability,
+                'risk_level': prediction_label,
+                'confidence': confidence,
                 'model_used': self.metadata.get('model_name', 'Unknown') if self.metadata else 'Fallback',
-                'threshold_used': threshold,
+                'threshold_used': self.metadata.get('best_threshold', 0.5) if self.metadata else 0.5,
                 'success': True
             }
             
@@ -310,9 +335,9 @@ class SmartphoneAddictionMLService:
             return {
                 'success': False,
                 'error': str(e),
-                'prediction': 0,
+                'prediction': 'Unknown',
                 'probability': 0.0,
-                'risk_level': 'UNKNOWN'
+                'risk_level': 'Unknown'
             }
     
     def get_feature_importance(self) -> Optional[List[Dict]]:

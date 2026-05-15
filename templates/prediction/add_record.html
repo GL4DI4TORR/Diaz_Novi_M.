@@ -190,7 +190,17 @@
             const response = await apiCall('/api/records/predict/', 'POST', formData);
             
             if (response.success) {
-                // Display result
+                // Normalize response values to avoid undefined/NaN output
+                let predictionLabel = response.prediction || response.risk_level || response.predicted_addiction_risk || 'Unknown';
+                if (predictionLabel === 'None') {
+                    predictionLabel = 'No Addiction';
+                }
+                let probabilityValue = Number.isFinite(response.probability) ? response.probability : parseFloat(response.probability);
+                if (!Number.isFinite(probabilityValue)) {
+                    probabilityValue = 0;
+                }
+                const recordIdText = response.record_id ? ` ID: #${response.record_id}` : '';
+
                 const riskColor = {
                     'No Addiction': '#43e97b',
                     'None': '#43e97b',
@@ -207,27 +217,26 @@
                     'Severe': 'fa-times-circle'
                 };
                 
-                const displayRisk = response.prediction === 'No Addiction' || response.prediction === 'None' ? 'No Addiction' : response.prediction;
+                const displayRisk = predictionLabel;
                 const displayColor = riskColor[displayRisk] || '#43e97b';
                 const displayIcon = riskEmoji[displayRisk] || 'fa-check-circle';
                 
                 let resultHTML = `
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle"></i>
-                        <span>Record added successfully! ID: #${response.record_id}</span>
+                        <span>Prediction completed successfully!${recordIdText}</span>
                     </div>
                     
                     <div style="background: linear-gradient(135deg, ${displayColor} 0%, ${displayColor} 100%); 
                                 color: white; border-radius: 12px; padding: 2rem; text-align: center; margin: 1.5rem 0; box-shadow: 0 8px 24px rgba(67, 233, 123, 0.18); border: 1px solid rgba(67, 233, 123, 0.35);">
                         <div style="font-size: 3rem; margin-bottom: 1rem;"><i class="fas ${displayIcon}"></i></div>
                         <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem;">${displayRisk} Risk</h2>
-                        <p style="font-size: 1.2rem;">Addiction Probability: <strong>${response.probability}%</strong></p>
+                        <p style="font-size: 1.2rem;">Addiction Probability: <strong>${probabilityValue}%</strong></p>
                     </div>
                     
                     <div style="background: #f5f5f5; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
                         <h3 style="color: #667eea; margin-bottom: 1rem;">Record Details</h3>
                         <ul style="list-style: none;">
-                            <li style="padding: 0.5rem 0;"><strong>Record ID:</strong> #${response.record_id}</li>
                             <li style="padding: 0.5rem 0;"><strong>Daily Screen Time:</strong> ${formData.daily_screen_time_hours} hours</li>
                             <li style="padding: 0.5rem 0;"><strong>Sleep Hours:</strong> ${formData.sleep_hours} hours</li>
                             <li style="padding: 0.5rem 0;"><strong>Stress Level:</strong> ${formData.stress_level}</li>

@@ -2,9 +2,16 @@ import pandas as pd
 
 df = pd.read_csv('Smartphone_Dataset_Cleaned.csv')
 
-# Fill remaining NaN with mode
-mode_val = df[df['addiction_level'].notna()]['addiction_level'].mode()[0]
-df['addiction_level'].fillna(mode_val, inplace=True)
+# Fill remaining NaN addiction_level values using original addicted_label when available
+if 'addicted_label' in df.columns:
+    def fill_level(row):
+        if pd.notna(row['addiction_level']):
+            return row['addiction_level']
+        return 'None' if int(row['addicted_label']) == 0 else 'Mild'
+    df['addiction_level'] = df.apply(fill_level, axis=1)
+else:
+    mode_val = df[df['addiction_level'].notna()]['addiction_level'].mode()[0]
+    df['addiction_level'].fillna(mode_val, inplace=True)
 
 # Verify
 print('Final Verification:')

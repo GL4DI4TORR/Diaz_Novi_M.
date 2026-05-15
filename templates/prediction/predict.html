@@ -208,8 +208,14 @@
             
             if (response.success) {
                 // Normalize response values to avoid undefined/NaN output
-                const predictionLabel = response.prediction || response.risk_level || response.predicted_addiction_risk || 'Unknown';
-                const probabilityValue = Number.isFinite(response.probability) ? response.probability : parseFloat(response.probability) || 0;
+                let predictionLabel = response.prediction || response.risk_level || response.predicted_addiction_risk || 'Unknown';
+                if (predictionLabel === 'None') {
+                    predictionLabel = 'No Addiction';
+                }
+                let probabilityValue = Number.isFinite(response.probability) ? response.probability : parseFloat(response.probability);
+                if (!Number.isFinite(probabilityValue)) {
+                    probabilityValue = 0;
+                }
 
                 const riskColor = {
                     'No Addiction': '#43e97b',

@@ -4,12 +4,22 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q
 import os
 import pandas as pd
 from .models import AddictionRecord
 from .serializers import AddictionRecordSerializer
 from .ml_service import ml_service
+
+
+def label_to_probability(label):
+    mapping = {
+        'No Addiction': 0.15,
+        'Mild': 0.35,
+        'Moderate': 0.55,
+        'Severe': 0.85,
+        'Unknown': 0.0
+    }
+    return mapping.get(label, 0.0)
 
 
 # ==================== Dataset Loading ====================
@@ -18,98 +28,115 @@ def load_dataset_records(limit=None):
     """Load dataset from Smartphone_Dataset.csv"""
     try:
         dataset_path = os.path.join(os.path.dirname(__file__), '..', 'Smartphone_Dataset.csv')
-        if os.path.exists(dataset_path):
-            df = pd.read_csv(dataset_path)
-            
-            records = []
-            count = 0
-            
-            for _, row in df.iterrows():
-                if limit and count >= limit:
-                    break
-                
-                # Prepare data for ML prediction
-                prediction_data = {
-                    'age': int(row['age']) if pd.notna(row['age']) else 25,
-                    'gender': str(row['gender']).strip() if pd.notna(row['gender']) else 'Other',
-                    'daily_screen_time_hours': float(row['daily_screen_time_hours']) if pd.notna(row['daily_screen_time_hours']) else 5.0,
-                    'social_media_hours': float(row['social_media_hours']) if pd.notna(row['social_media_hours']) else 2.0,
-                    'gaming_hours': float(row['gaming_hours']) if pd.notna(row['gaming_hours']) else 1.0,
-                    'work_study_hours': float(row['work_study_hours']) if pd.notna(row['work_study_hours']) else 3.0,
-                    'sleep_hours': float(row['sleep_hours']) if pd.notna(row['sleep_hours']) else 7.0,
-                    'notifications_per_day': int(row['notifications_per_day']) if pd.notna(row['notifications_per_day']) else 100,
-                    'app_opens_per_day': int(row['app_opens_per_day']) if pd.notna(row['app_opens_per_day']) else 50,
-                    'weekend_screen_time': float(row['weekend_screen_time']) if pd.notna(row['weekend_screen_time']) else 6.0,
-                    'stress_level': str(row['stress_level']).strip() if pd.notna(row['stress_level']) else 'Medium',
-                    'academic_work_impact': str(row['academic_work_impact']).strip() if pd.notna(row['academic_work_impact']) else 'No'
-                }
-                
-                # Get ML prediction for accurate risk assessment
-                ml_result = ml_service.predict(prediction_data)
-                
-                # Map ML risk levels to display format
-                risk_mapping = {
-                    'LOW': 'No Addiction',
-                    'MEDIUM': 'Mild', 
-                    'HIGH': 'Moderate',
-                    'CRITICAL': 'Severe'
-                }
-                addiction_risk = risk_mapping.get(ml_result['risk_level'], 'Mild')
-                addiction_prob = ml_result['probability']
-                
-                try:
-                    # Handle NaN values by using defaults
-                    record = AddictionRecord(
-                        age=int(row['age']) if pd.notna(row['age']) else 25,
-                        gender=str(row['gender']).strip() if pd.notna(row['gender']) else 'Other',
-                        daily_screen_time_hours=float(row['daily_screen_time_hours']) if pd.notna(row['daily_screen_time_hours']) else 5.0,
-                        social_media_hours=float(row['social_media_hours']) if pd.notna(row['social_media_hours']) else 2.0,
-                        gaming_hours=float(row['gaming_hours']) if pd.notna(row['gaming_hours']) else 1.0,
-                        work_study_hours=float(row['work_study_hours']) if pd.notna(row['work_study_hours']) else 3.0,
-                        sleep_hours=float(row['sleep_hours']) if pd.notna(row['sleep_hours']) else 7.0,
-                        stress_level=str(row['stress_level']).strip() if pd.notna(row['stress_level']) else 'Medium',
-                        notifications_per_day=int(row['notifications_per_day']) if pd.notna(row['notifications_per_day']) else 100,
-                        app_opens_per_day=int(row['app_opens_per_day']) if pd.notna(row['app_opens_per_day']) else 50,
-                        weekend_screen_time=float(row['weekend_screen_time']) if pd.notna(row['weekend_screen_time']) else 6.0,
-                        academic_work_impact=str(row['academic_work_impact']).strip() if pd.notna(row['academic_work_impact']) else 'No',
-                        predicted_addiction_risk=addiction_risk,
-                        addiction_probability=addiction_prob
-                    )
-                    records.append(record)
-                    count += 1
-                except Exception as e:
-                    print(f"Error creating record: {e}")
-                    continue
-            
-            # Check record count limit before loading dataset
-            current_count = AddictionRecord.objects.count()
-            if current_count >= 10000:
-                return {
-                    'success': False,
-                    'message': 'Maximum record limit reached (10,000 records). Please delete some records before loading dataset.'
-                }
-            
-            # Find existing IDs to reuse
-            existing_ids = set(AddictionRecord.objects.values_list('id', flat=True))
-            next_id = 1
-            
-            # Assign IDs to records, reusing deleted IDs
-            for record in records:
-                while next_id in existing_ids:
-                    next_id += 1
-                record.id = next_id
-                existing_ids.add(next_id)
-                next_id += 1
-            
-            # Bulk create all records at once
-            if records:
-                AddictionRecord.objects.bulk_create(records, batch_size=1000)
-            
+        if not os.path.exists(dataset_path):
             return {
-                'success': True,
-                'records_loaded': count,
-                'message': f'Loaded {count} records from dataset'
+                'success': False,
+                'message': 'Dataset file not found.'
             }
+
+        df = pd.read_csv(dataset_path)
+
+        # Use original dataset labels directly rather than predicting each row
+        label_mapping = {
+            'none': 'No Addiction',
+            'no addiction': 'No Addiction',
+            'mild': 'Mild',
+            'moderate': 'Moderate',
+            'severe': 'Severe',
+            'high': 'Severe',
+            'extreme': 'Severe',
+            'sev': 'Severe'
+        }
+
+        def clean_str(value, default=''):
+            return str(value).strip() if pd.notna(value) else default
+
+        def clean_int(value, default=0):
+            if not pd.notna(value):
+                return default
+            try:
+                return int(value)
+            except Exception:
+                return default
+
+        def clean_float(value, default=0.0):
+            if not pd.notna(value):
+                return default
+            try:
+                result = float(value)
+                return default if pd.isna(result) else result
+            except Exception:
+                return default
+
+        records = []
+        count = 0
+
+        for _, row in df.iterrows():
+            if limit and count >= limit:
+                break
+
+            age = clean_int(row.get('age'), 25)
+            gender = clean_str(row.get('gender'), 'Other')
+            daily_screen_time_hours = clean_float(row.get('daily_screen_time_hours'), 5.0)
+            social_media_hours = clean_float(row.get('social_media_hours'), 2.0)
+            gaming_hours = clean_float(row.get('gaming_hours'), 1.0)
+            work_study_hours = clean_float(row.get('work_study_hours'), 3.0)
+            sleep_hours = clean_float(row.get('sleep_hours'), 7.0)
+            notifications_per_day = clean_int(row.get('notifications_per_day'), 100)
+            app_opens_per_day = clean_int(row.get('app_opens_per_day'), 50)
+            weekend_screen_time = clean_float(row.get('weekend_screen_time'), 6.0)
+            stress_level = clean_str(row.get('stress_level'), 'Medium')
+            academic_work_impact = clean_str(row.get('academic_work_impact'), 'No')
+
+            raw_label = clean_str(row.get('addiction_level'), '')
+            addicted_label_value = row.get('addicted_label', None)
+            addicted_label = clean_int(addicted_label_value, None) if addicted_label_value not in [None, ''] else None
+
+            if raw_label:
+                addiction_risk = label_mapping.get(raw_label.lower(), 'Unknown')
+            elif addicted_label is not None:
+                addiction_risk = 'No Addiction' if addicted_label == 0 else 'Mild'
+            else:
+                addiction_risk = 'Unknown'
+
+            addiction_prob = None
+            if 'addiction_probability' in row.index and pd.notna(row.get('addiction_probability')):
+                addiction_prob = clean_float(row.get('addiction_probability'), None)
+
+            if addiction_prob is None:
+                addiction_prob = label_to_probability(addiction_risk)
+
+            try:
+                record = AddictionRecord(
+                    age=age,
+                    gender=gender,
+                    daily_screen_time_hours=daily_screen_time_hours,
+                    social_media_hours=social_media_hours,
+                    gaming_hours=gaming_hours,
+                    work_study_hours=work_study_hours,
+                    sleep_hours=sleep_hours,
+                    stress_level=stress_level,
+                    notifications_per_day=notifications_per_day,
+                    app_opens_per_day=app_opens_per_day,
+                    weekend_screen_time=weekend_screen_time,
+                    academic_work_impact=academic_work_impact,
+                    predicted_addiction_risk=addiction_risk,
+                    addiction_probability=float(addiction_prob)
+                )
+                records.append(record)
+                count += 1
+            except Exception as e:
+                print(f"Error creating record: {e}")
+                continue
+
+        if records:
+            AddictionRecord.objects.bulk_create(records, batch_size=1000)
+
+        return {
+            'success': True,
+            'records_loaded': count,
+            'message': f'Loaded {count} records from dataset'
+        }
     except Exception as e:
         print(f"Error loading dataset: {e}")
         return {
@@ -169,35 +196,20 @@ def dashboard(request):
     except Exception as e:
         print(f"Error loading CSV for dashboard: {e}")
     
-    # Database Records Statistics (New Predictions)
-    db_addiction_dist = {}
-    db_total = AddictionRecord.objects.count()
-    
-    for level in ['None', 'Mild', 'Moderate', 'Severe']:
-        if level == 'None':
-            db_count = AddictionRecord.objects.filter(
-                Q(predicted_addiction_risk='None') | Q(predicted_addiction_risk='No Addiction')
-            ).count()
-        else:
-            db_count = AddictionRecord.objects.filter(predicted_addiction_risk=level).count()
-        db_addiction_dist[level] = db_count
-    
-    # Calculate CSV percentages
+    # Calculate CSV percentages only (original dataset analytics)
     csv_none_percentage = (csv_addiction_dist['None'] / csv_total * 100) if csv_total > 0 else 0
     csv_mild_percentage = (csv_addiction_dist['Mild'] / csv_total * 100) if csv_total > 0 else 0
     csv_moderate_percentage = (csv_addiction_dist['Moderate'] / csv_total * 100) if csv_total > 0 else 0
     csv_severe_percentage = (csv_addiction_dist['Severe'] / csv_total * 100) if csv_total > 0 else 0
     
-    # Calculate Database percentages
-    db_none_percentage = (db_addiction_dist['None'] / db_total * 100) if db_total > 0 else 0
-    db_mild_percentage = (db_addiction_dist['Mild'] / db_total * 100) if db_total > 0 else 0
-    db_moderate_percentage = (db_addiction_dist['Moderate'] / db_total * 100) if db_total > 0 else 0
-    db_severe_percentage = (db_addiction_dist['Severe'] / db_total * 100) if db_total > 0 else 0
-    
     avg_prob = 0
-    if db_total > 0:
-        records = AddictionRecord.objects.all()
-        avg_prob = sum(r.addiction_probability for r in records) / db_total
+    try:
+        db_records = AddictionRecord.objects.all()
+        total_db = db_records.count()
+        if total_db > 0:
+            avg_prob = sum(r.addiction_probability for r in db_records) / total_db
+    except Exception as e:
+        print(f"Error computing avg probability from DB: {e}")
     
     # Get model information with Gradient Boosting metrics
     model_info = ml_service.get_model_info()
@@ -211,13 +223,6 @@ def dashboard(request):
         'csv_mild_percentage': csv_mild_percentage,
         'csv_moderate_percentage': csv_moderate_percentage,
         'csv_severe_percentage': csv_severe_percentage,
-        # Database Records Data
-        'db_total_records': db_total,
-        'db_addiction_distribution': db_addiction_dist,
-        'db_none_percentage': db_none_percentage,
-        'db_mild_percentage': db_mild_percentage,
-        'db_moderate_percentage': db_moderate_percentage,
-        'db_severe_percentage': db_severe_percentage,
         'average_probability': round(avg_prob * 100, 2),
         'model_info': model_info,
         # Gradient Boosting Superior Performance
@@ -278,6 +283,70 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
     """ViewSet for addiction records with prediction endpoint"""
     queryset = AddictionRecord.objects.all()
     serializer_class = AddictionRecordSerializer
+
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {'success': False, 'error': 'Creating new records through the API is disabled. Use the original dataset only.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+    def update(self, request, *args, **kwargs):
+        return Response(
+            {'success': False, 'error': 'Updating records through the API is disabled. Predictions are read-only.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response(
+            {'success': False, 'error': 'Partial updates are disabled. Predictions are read-only.'},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED
+        )
+
+    def _recompute_missing_probabilities(self):
+        missing_records = AddictionRecord.objects.filter(addiction_probability__lte=0.0)
+        if not missing_records.exists():
+            return 0
+
+        records_to_update = []
+        prediction_inputs = []
+
+        for record in missing_records.iterator():
+            records_to_update.append(record)
+            if record.predicted_addiction_risk in ['No Addiction', 'Mild', 'Moderate', 'Severe']:
+                record.addiction_probability = label_to_probability(record.predicted_addiction_risk)
+                continue
+
+            prediction_inputs.append({
+                'age': record.age,
+                'gender': record.gender,
+                'daily_screen_time_hours': record.daily_screen_time_hours,
+                'social_media_hours': record.social_media_hours,
+                'gaming_hours': record.gaming_hours,
+                'work_study_hours': record.work_study_hours,
+                'sleep_hours': record.sleep_hours,
+                'notifications_per_day': record.notifications_per_day,
+                'app_opens_per_day': record.app_opens_per_day,
+                'weekend_screen_time': record.weekend_screen_time,
+                'stress_level': record.stress_level,
+                'academic_work_impact': record.academic_work_impact
+            })
+
+        if prediction_inputs:
+            probabilities = ml_service.predict_batch(prediction_inputs)
+            updated = []
+            prob_index = 0
+            for record in records_to_update:
+                if record.addiction_probability <= 0.0:
+                    record.addiction_probability = float(probabilities[prob_index])
+                    prob_index += 1
+                updated.append(record)
+        else:
+            updated = [record for record in records_to_update if record.addiction_probability is not None]
+
+        if updated:
+            AddictionRecord.objects.bulk_update(updated, ['addiction_probability'])
+
+        return len(updated)
     
     def find_matching_dataset_record(self, input_data):
         """Find matching record in original Smartphone_Dataset.csv"""
@@ -320,11 +389,19 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
                 
                 matching_rows = df[mask]
                 if not matching_rows.empty:
-                    # Return the first match with its addiction label
+                    # Return the first match with its addiction label or original binary label
                     matched_row = matching_rows.iloc[0]
+                    matched_label = str(matched_row.get('addiction_level', '')).strip()
+                    if not matched_label:
+                        addicted_label_value = matched_row.get('addicted_label', None)
+                        if pd.notna(addicted_label_value):
+                            matched_label = 'No Addiction' if int(addicted_label_value) == 0 else 'Mild'
+                        else:
+                            matched_label = 'Unknown'
                     return {
                         'found': True,
-                        'addiction_label': str(matched_row.get('addiction_level', 'Unknown')).strip(),
+                        'addiction_label': matched_label,
+                        'addiction_probability': label_to_probability(matched_label),
                         'data': matched_row.to_dict()
                     }
         except Exception as e:
@@ -382,17 +459,14 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
                     'Severe': 'Severe'
                 }
                 display_prediction = risk_mapping.get(addiction_label, addiction_label)
-                
-                # Get probability from ML model for consistency
-                ml_result = ml_service.predict(data)
-                probability = ml_result.get('probability', 0.5) if ml_result.get('success') else 0.5
+                probability = dataset_match.get('addiction_probability', label_to_probability(display_prediction))
                 
                 recommendations = generate_recommendations(data, display_prediction, probability)
                 
                 return Response({
                     'success': True,
                     'prediction': display_prediction,
-                    'risk_level': addiction_label,
+                    'risk_level': display_prediction,
                     'probability': round(probability * 100, 2),
                     'confidence': 'Very High',
                     'recommendations': recommendations,
@@ -491,22 +565,32 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def load_dataset(self, request):
         """Load sample dataset into records"""
-        # Check if we already have dataset records
         existing_count = AddictionRecord.objects.count()
         
         if existing_count > 0:
+            missing_count = self._recompute_missing_probabilities()
+            if missing_count > 0:
+                return Response({
+                    'success': True,
+                    'message': f'Updated probability for {missing_count} existing records that had missing values.',
+                    'records_updated': missing_count,
+                    'total_records': existing_count
+                })
             return Response({
-                'success': True,
-                'message': f'Database already has {existing_count} records. Clear records first to reload dataset.',
+                'success': False,
+                'message': f'Database already has {existing_count} records. Clear records first to reload the dataset.',
                 'records_loaded': 0,
                 'total_records': existing_count
             })
         
-        # Load all dataset records (7500 total)
         result = load_dataset_records(limit=None)
         
         total_records = AddictionRecord.objects.count()
         result['total_records'] = total_records
+        
+        # give a precise dataset count if load succeeded
+        if result.get('success') and 'records_loaded' in result:
+            result['message'] = f"Loaded {result['records_loaded']} records from dataset. Original CSV has {total_records} rows."
         
         return Response(result)
     

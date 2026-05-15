@@ -13,6 +13,21 @@
 
 <!-- Dataset Controls -->
 <div style="display: flex; gap: 1rem; margin: 1.5rem 0; flex-wrap: wrap;">
+    <button id="loadDatasetBtn" style="
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #4facfe 0%, #667eea 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(102, 126, 234, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+        <i class="fas fa-database"></i> Load Sample Dataset
+    </button>
     <button id="clearRecordsBtn" style="
         padding: 0.75rem 1.5rem;
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
@@ -25,7 +40,7 @@
         align-items: center;
         gap: 0.5rem;
         transition: all 0.3s ease;
-    ' onmouseover="this.style.transform=\'translateY(-2px)\'; this.style.boxShadow=\'0 8px 16px rgba(245, 87, 108, 0.3)\'" onmouseout="this.style.transform=\'translateY(0)\'; this.style.boxShadow=\'none\'">
+    " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(245, 87, 108, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
         <i class="fas fa-trash"></i> Clear All Records
     </button>
 </div>
@@ -228,12 +243,12 @@ async function loadDataset() {
         
         const data = await response.json();
         
-        if (data.success && data.records_loaded > 0) {
+        if (data.success) {
             statusDiv.textContent = `✅ ${data.message}`;
             statusDiv.style.background = '#d4edda';
             statusDiv.style.color = '#155724';
             
-            // Reload page after 2 seconds
+            // Reload page after 2 seconds so the current records state is visible
             setTimeout(() => location.reload(), 2000);
         } else {
             statusDiv.textContent = `ℹ️ ${data.message}`;

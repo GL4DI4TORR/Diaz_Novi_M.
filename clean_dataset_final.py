@@ -98,7 +98,8 @@ for col in numeric_cols:
         df[col].fillna(median_val, inplace=True)
 
 # For categorical columns: Use mode (most frequent value)
-categorical_cols = ['gender', 'stress_level', 'academic_work_impact', 'addiction_level']
+# Preserve original addiction_level blanks so binary addicted_label stays authoritative.
+categorical_cols = ['gender', 'stress_level', 'academic_work_impact']
 
 for col in categorical_cols:
     if df[col].isnull().sum() > 0:
@@ -149,16 +150,20 @@ print("✓ All values bounded to realistic ranges")
 # ============================================================================
 print("\n>>> STEP 6: RECONCILING ADDICTION LABELS...")
 
-# Create binary label from addiction_level
-addiction_to_binary = {
-    'None': 0,
-    'Mild': 1,
-    'Moderate': 1,
-    'Severe': 1
-}
-df['addicted_label'] = df['addiction_level'].map(addiction_to_binary)
+# Preserve original addicted_label values when they exist.
+if 'addicted_label' in df.columns:
+    df['addicted_label'] = df['addicted_label'].astype(int)
+else:
+    # Create binary label from addiction_level only when no original binary label exists.
+    addiction_to_binary = {
+        'None': 0,
+        'Mild': 1,
+        'Moderate': 1,
+        'Severe': 1
+    }
+    df['addicted_label'] = df['addiction_level'].map(addiction_to_binary).fillna(0).astype(int)
 
-print(f"✓ Labels reconciled")
+print(f"✓ Labels preserved or reconciled")
 addicted_count = (df['addicted_label'] == 1).sum()
 not_addicted_count = (df['addicted_label'] == 0).sum()
 print(f"  • Addicted: {addicted_count:,} ({addicted_count/len(df)*100:.1f}%)")
