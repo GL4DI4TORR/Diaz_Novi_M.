@@ -283,11 +283,11 @@ class SmartphoneAddictionMLService:
 
     def map_probability_to_label(self, probability: float) -> str:
         """Map a prediction probability to a consistent addiction label."""
-        if probability < 0.25:
+        if probability < 0.15:
             return 'No Addiction'
-        if probability < 0.45:
+        if probability < 0.35:
             return 'Mild'
-        if probability < 0.70:
+        if probability < 0.55:
             return 'Moderate'
         return 'Severe'
 

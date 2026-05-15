@@ -354,31 +354,19 @@
                 searchResult.innerHTML = `
                     <div class="alert alert-success">
                         <i class="fas fa-check-circle"></i>
-                        <strong>Record Found!</strong> ID: #${record.id} | 
-                        Risk Level: ${record.predicted_addiction_risk} | 
-                        Probability: ${(record.addiction_probability * 100).toFixed(1)}%
-                        <br><small>Form has been filled with the record data. You can modify values and click "Predict Addiction Risk" to update.</small>
+                        <strong>Record Found!</strong>
                     </div>
                 `;
                 
-                // Scroll to form
                 document.getElementById('predictionForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
                 document.getElementById('source_record_id').value = '';
-            searchResult.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Record not found: ${response.error || 'Unknown error'}</div>`;
+                searchResult.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Record not found: ${response.error || 'Unknown error'}</div>`;
             }
         } catch (error) {
             searchResult.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times"></i> Error searching: ${error.message}</div>`;
         }
     }
-
-    // Add Enter key support for search
-    document.getElementById('searchInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            searchRecord();
-        }
-    });
 
     // Load Sample Data function
     async function loadSampleData() {

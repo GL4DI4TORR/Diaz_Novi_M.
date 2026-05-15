@@ -11,15 +11,40 @@ from .serializers import AddictionRecordSerializer
 from .ml_service import ml_service
 
 
-def label_to_probability(label):
-    mapping = {
-        'No Addiction': 0.15,
-        'Mild': 0.35,
-        'Moderate': 0.55,
-        'Severe': 0.85,
-        'Unknown': 0.0
+def label_probability_range(label):
+    ranges = {
+        'No Addiction': (0.0, 0.15),
+        'Mild': (0.15, 0.35),
+        'Moderate': (0.35, 0.55),
+        'Severe': (0.55, 0.85),
+        'Unknown': (0.0, 1.0)
     }
-    return mapping.get(label, 0.0)
+    return ranges.get(label, ranges['Unknown'])
+
+
+def label_to_probability(label, index=None):
+    low, high = label_probability_range(label)
+    if index is None:
+        return (low + high) / 2.0
+    fraction = ((index % 10) + 1) / 11.0
+    return low + fraction * (high - low)
+
+
+def normalize_dataset_label(raw_label):
+    if not raw_label or str(raw_label).strip() == '':
+        return 'Unknown'
+    normalized = str(raw_label).strip().lower()
+    label_mapping = {
+        'none': 'No Addiction',
+        'no addiction': 'No Addiction',
+        'mild': 'Mild',
+        'moderate': 'Moderate',
+        'severe': 'Severe',
+        'high': 'Severe',
+        'extreme': 'Severe',
+        'sev': 'Severe'
+    }
+    return label_mapping.get(normalized, str(raw_label).strip().title())
 
 
 # ==================== Dataset Loading ====================
@@ -35,18 +60,6 @@ def load_dataset_records(limit=None):
             }
 
         df = pd.read_csv(dataset_path)
-
-        # Use original dataset labels directly rather than predicting each row
-        label_mapping = {
-            'none': 'No Addiction',
-            'no addiction': 'No Addiction',
-            'mild': 'Mild',
-            'moderate': 'Moderate',
-            'severe': 'Severe',
-            'high': 'Severe',
-            'extreme': 'Severe',
-            'sev': 'Severe'
-        }
 
         def clean_str(value, default=''):
             return str(value).strip() if pd.notna(value) else default
@@ -93,7 +106,7 @@ def load_dataset_records(limit=None):
             addicted_label = clean_int(addicted_label_value, None) if addicted_label_value not in [None, ''] else None
 
             if raw_label:
-                addiction_risk = label_mapping.get(raw_label.lower(), 'Unknown')
+                addiction_risk = normalize_dataset_label(raw_label)
             elif addicted_label is not None:
                 addiction_risk = 'No Addiction' if addicted_label == 0 else 'Mild'
             else:
@@ -104,30 +117,27 @@ def load_dataset_records(limit=None):
                 addiction_prob = clean_float(row.get('addiction_probability'), None)
 
             if addiction_prob is None:
-                addiction_prob = label_to_probability(addiction_risk)
+                addiction_prob = label_to_probability(addiction_risk, count)
 
-            try:
-                record = AddictionRecord(
-                    age=age,
-                    gender=gender,
-                    daily_screen_time_hours=daily_screen_time_hours,
-                    social_media_hours=social_media_hours,
-                    gaming_hours=gaming_hours,
-                    work_study_hours=work_study_hours,
-                    sleep_hours=sleep_hours,
-                    stress_level=stress_level,
-                    notifications_per_day=notifications_per_day,
-                    app_opens_per_day=app_opens_per_day,
-                    weekend_screen_time=weekend_screen_time,
-                    academic_work_impact=academic_work_impact,
-                    predicted_addiction_risk=addiction_risk,
-                    addiction_probability=float(addiction_prob)
-                )
-                records.append(record)
-                count += 1
-            except Exception as e:
-                print(f"Error creating record: {e}")
-                continue
+            record = AddictionRecord(
+                age=age,
+                gender=gender,
+                daily_screen_time_hours=daily_screen_time_hours,
+                social_media_hours=social_media_hours,
+                gaming_hours=gaming_hours,
+                work_study_hours=work_study_hours,
+                sleep_hours=sleep_hours,
+                stress_level=stress_level,
+                notifications_per_day=notifications_per_day,
+                app_opens_per_day=app_opens_per_day,
+                weekend_screen_time=weekend_screen_time,
+                academic_work_impact=academic_work_impact,
+                predicted_addiction_risk=addiction_risk,
+                addiction_probability=float(addiction_prob)
+            )
+            records.append(record)
+
+            count += 1
 
         if records:
             AddictionRecord.objects.bulk_create(records, batch_size=1000)
@@ -312,10 +322,6 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
 
         for record in missing_records.iterator():
             records_to_update.append(record)
-            if record.predicted_addiction_risk in ['No Addiction', 'Mild', 'Moderate', 'Severe']:
-                record.addiction_probability = label_to_probability(record.predicted_addiction_risk)
-                continue
-
             prediction_inputs.append({
                 'age': record.age,
                 'gender': record.gender,
@@ -331,22 +337,14 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
                 'academic_work_impact': record.academic_work_impact
             })
 
-        if prediction_inputs:
-            probabilities = ml_service.predict_batch(prediction_inputs)
-            updated = []
-            prob_index = 0
-            for record in records_to_update:
-                if record.addiction_probability <= 0.0:
-                    record.addiction_probability = float(probabilities[prob_index])
-                    prob_index += 1
-                updated.append(record)
-        else:
-            updated = [record for record in records_to_update if record.addiction_probability is not None]
+        probabilities = ml_service.predict_batch(prediction_inputs)
+        for record, probability in zip(records_to_update, probabilities):
+            record.addiction_probability = float(probability)
 
-        if updated:
-            AddictionRecord.objects.bulk_update(updated, ['addiction_probability'])
+        if records_to_update:
+            AddictionRecord.objects.bulk_update(records_to_update, ['addiction_probability'])
 
-        return len(updated)
+        return len(records_to_update)
     
     def find_matching_dataset_record(self, input_data):
         """Find matching record in original Smartphone_Dataset.csv"""
@@ -398,10 +396,20 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
                             matched_label = 'No Addiction' if int(addicted_label_value) == 0 else 'Mild'
                         else:
                             matched_label = 'Unknown'
+                    addiction_probability = None
+                    if 'addiction_probability' in matched_row.index and pd.notna(matched_row.get('addiction_probability')):
+                        try:
+                            addiction_probability = float(matched_row.get('addiction_probability'))
+                        except Exception:
+                            addiction_probability = None
+
+                    if addiction_probability is None:
+                        addiction_probability = label_to_probability(matched_label)
+
                     return {
                         'found': True,
                         'addiction_label': matched_label,
-                        'addiction_probability': label_to_probability(matched_label),
+                        'addiction_probability': addiction_probability,
                         'data': matched_row.to_dict()
                     }
         except Exception as e:
@@ -484,34 +492,23 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_503_SERVICE_UNAVAILABLE
                 )
             
-            # Map risk level to addiction level
-            risk_mapping = {
-                'LOW': 'No Addiction',
-                'MEDIUM': 'Mild', 
-                'HIGH': 'Moderate',
-                'CRITICAL': 'Severe'
-            }
-            addiction_level = risk_mapping.get(result['risk_level'], 'Mild')
-            display_prediction = 'No Addiction' if addiction_level == 'No Addiction' else addiction_level
-            
-            # Only predict - don't save to database
-            # Predictions are read-only based on original dataset
-            record = None
-            
-            recommendations = generate_recommendations(data, addiction_level, result['probability'])
-            
+            display_prediction = result.get('prediction') or ml_service.map_probability_to_label(result.get('probability', 0.0))
+            risk_level = display_prediction
+            probability = float(result.get('probability', 0.0))
+
+            recommendations = generate_recommendations(data, display_prediction, probability)
+
             return Response({
                 'success': True,
                 'prediction': display_prediction,
-                'risk_level': result['risk_level'],
-                'probability': round(result['probability'] * 100, 2),
-                'confidence': result['confidence'],
+                'risk_level': risk_level,
+                'probability': round(probability * 100, 2),
+                'confidence': result.get('confidence'),
                 'recommendations': recommendations,
-                'model_used': result['model_used'],
-                'message': f'Addiction risk: {display_prediction} ({result["risk_level"]})',
+                'model_used': result.get('model_used'),
+                'message': f'Addiction risk: {display_prediction} ({risk_level})',
                 'note': 'This is a read-only prediction based on ML analysis'
             }, status=status.HTTP_200_OK)
-            
         except KeyError as e:
             return Response(
                 {'error': f'Missing field: {str(e)}'},
@@ -522,7 +519,7 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Get prediction statistics"""
@@ -703,18 +700,11 @@ class AddictionRecordViewSet(viewsets.ModelViewSet):
                 # Use the same prediction logic as the main predict method
                 result = ml_service.predict(data)
                 if result.get('success', False):
-                    # Map risk level to addiction level (same as predict method)
-                    risk_mapping = {
-                        'LOW': 'No Addiction',
-                        'MEDIUM': 'Mild', 
-                        'HIGH': 'Moderate',
-                        'CRITICAL': 'Severe'
-                    }
-                    addiction_level = risk_mapping.get(result['risk_level'], 'Mild')
-                    
-                    record.predicted_addiction_risk = addiction_level
-                    record.addiction_probability = result.get('probability', 0.0)
-                else:
+                    display_prediction = result.get('prediction') or ml_service.map_probability_to_label(result.get('probability', 0.0))
+                    probability = float(result.get('probability', 0.0))
+
+                    record.predicted_addiction_risk = display_prediction
+                    record.addiction_probability = probability
                     # If prediction fails, keep existing values
                     print(f"Prediction failed during update: {result.get('error', 'Unknown error')}")
                     pass
